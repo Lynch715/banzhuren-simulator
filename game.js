@@ -925,12 +925,31 @@ function runSteps(steps,done){
   next();
 }
 
-// 手机上把双指缩放和双击放大按死；配合 meta viewport 与 touch-action:manipulation
+// 手机上把双指缩放和双击放大按死。
+// meta viewport 的 user-scalable=no 在 iOS 10+ 的 Safari 里是被无视的，
+// CSS 的 touch-action:pan-x pan-y 管住绝大多数场景，剩下的靠这里的手势事件兜底。
 function lockZoom(){
-  ["gesturestart","gesturechange","gestureend"].forEach(t=>
-    document.addEventListener(t,e=>e.preventDefault(),{passive:false}));
-  document.addEventListener("touchmove",e=>{ if(e.touches.length>1) e.preventDefault(); },{passive:false});
-  document.addEventListener("dblclick",e=>e.preventDefault(),{passive:false});
+  const stop=e=>e.preventDefault();
+  // iOS Safari 的捏合走 gesture* 这套私有事件，document 和 window 都挂上
+  ["gesturestart","gesturechange","gestureend"].forEach(t=>{
+    document.addEventListener(t,stop,{passive:false});
+    window.addEventListener(t,stop,{passive:false});
+  });
+  // 安卓 / Chrome：只要有第二根手指落下就掐掉，不等它变成缩放
+  document.addEventListener("touchstart",e=>{ if(e.touches.length>1) e.preventDefault(); },{passive:false});
+  document.addEventListener("touchmove", e=>{ if(e.touches.length>1) e.preventDefault(); },{passive:false});
+  // 双击放大兜底。只掐「同一个位置的连续两下」，
+  // 否则快速点两个不同按钮时第二下的 click 会被一起吃掉。
+  let lastT=0,lastX=0,lastY=0;
+  document.addEventListener("touchend",e=>{
+    const t=e.changedTouches&&e.changedTouches[0]; if(!t) return;
+    const now=Date.now();
+    if(now-lastT<=300 && Math.abs(t.clientX-lastX)<30 && Math.abs(t.clientY-lastY)<30) e.preventDefault();
+    lastT=now; lastX=t.clientX; lastY=t.clientY;
+  },{passive:false});
+  document.addEventListener("dblclick",stop,{passive:false});
+  // 桌面浏览器的 Ctrl/⌘ + 滚轮缩放
+  document.addEventListener("wheel",e=>{ if(e.ctrlKey||e.metaKey) e.preventDefault(); },{passive:false});
 }
 
 function boot(){
