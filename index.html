@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="theme-color" content="#123c43">
+  <meta name="description" content="《铃响之后》——一款关于教学、陪伴与高考的班主任模拟器。">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23153f44' d='M32 2 58 12l-5 38-21 12L11 50 6 12z'/%3E%3Cpath fill='%23f5cf69' d='M18 20h28v5H35v20h-6V25H18z'/%3E%3C/svg%3E">
+  <title>铃响之后 · 班主任模拟器</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <section id="startScreen" class="start-screen">
+      <div class="start-art" aria-hidden="true"></div>
+      <div class="start-panel paper-card">
+        <div class="eyebrow">明德中学 · 2026 届</div>
+        <h1><span>铃响</span>之后</h1>
+        <p class="subtitle">班主任模拟器</p>
+        <p class="start-copy">离高考还有 12 周。你要教好一门课，也要接住每一个正在长大的孩子。</p>
+        <div class="subject-label">选择你的任教学科</div>
+        <div class="subject-grid" role="radiogroup" aria-label="任教学科">
+          <button class="subject-card active" data-subject="math" role="radio" aria-checked="true">
+            <span class="subject-icon">∑</span><strong>数学</strong><small>逻辑训练 · 提分稳定</small>
+          </button>
+          <button class="subject-card" data-subject="chinese" role="radio" aria-checked="false">
+            <span class="subject-icon">文</span><strong>语文</strong><small>阅读写作 · 情绪感知</small>
+          </button>
+          <button class="subject-card" data-subject="english" role="radio" aria-checked="false">
+            <span class="subject-icon">Aa</span><strong>英语</strong><small>词汇表达 · 习惯养成</small>
+          </button>
+        </div>
+        <button id="startBtn" class="primary-btn ink-btn">接过高三（7）班</button>
+        <p class="save-note">进度会自动保存在本机</p>
+        <p class="content-note">内容提示：本作涉及高考压力下的青少年心理危机，包含自伤相关情节与不可逆的严重后果。这些内容的作用是提醒玩家留意现实中的求助信号，而非渲染。若你或身边的人正处在类似处境，请联系专业机构或你信任的人。</p>
+      </div>
+    </section>
+
+    <main id="gameScreen" class="game-shell hidden">
+      <header class="topbar">
+        <div class="brand-lockup">
+          <div class="school-badge" aria-hidden="true"><span>明</span></div>
+          <div><strong>高三（7）班</strong><small id="teacherLine">数学 · 班主任</small></div>
+        </div>
+        <div class="calendar-chip"><span id="weekLabel">第 1 周</span><small id="examCountdown">距月考 3 周</small></div>
+        <div class="header-actions">
+          <button id="soundBtn" class="icon-btn" title="音效" aria-label="切换音效"></button>
+          <button id="helpBtn" class="icon-btn" title="玩法说明" aria-label="打开玩法说明"></button>
+          <button id="resetBtn" class="icon-btn danger" title="重新开始" aria-label="重新开始"></button>
+        </div>
+      </header>
+
+      <div class="main-grid">
+        <aside class="left-rail">
+          <section class="paper-card class-card">
+            <div class="section-kicker">CLASS PULSE</div>
+            <h2>班级状态</h2>
+            <div id="classStats" class="class-stats"></div>
+            <div class="rank-strip">
+              <span>年级排名</span><strong id="classRank">— / 8</strong>
+              <div class="rank-track"><i id="rankFill"></i></div>
+            </div>
+          </section>
+
+          <section class="paper-card rival-card">
+            <div class="section-head"><h2>年级八个班</h2><span>预估均分</span></div>
+            <div id="rivalList"></div>
+          </section>
+
+          <section class="paper-card notebook-card">
+            <div class="section-head"><h2>本周备忘</h2><span id="energyText">行动力 3/3</span></div>
+            <div id="weeklyGoals"></div>
+          </section>
+        </aside>
+
+        <section class="center-stage">
+          <div class="scene-frame">
+            <div id="sceneArt" class="scene-art scene-classroom"></div>
+            <div class="scene-shade"></div>
+            <div class="scene-topline">
+              <span id="sceneLocation">高三（7）班教室</span>
+              <span id="weatherText">周一 · 晴</span>
+            </div>
+            <div id="sceneNarration" class="scene-narration">
+              <span class="quote-mark">“</span>
+              <p>早读铃刚响，走廊里还带着清晨的凉意。今天，你准备先做什么？</p>
+            </div>
+            <div id="speakerPortrait" class="speaker-wrap hidden">
+              <div class="portrait portrait-teacher"></div>
+              <div class="speaker-name">你</div>
+            </div>
+          </div>
+
+          <section class="tt-board paper-card">
+            <div class="action-head">
+              <div><span class="section-kicker">TIMETABLE</span><h2>这周的课表</h2></div>
+              <span class="tt-hint">白天六节由教务处排 · 晚自习两节归你</span>
+            </div>
+            <div id="timetable"></div>
+          </section>
+
+          <section class="action-board paper-card">
+            <div class="action-head">
+              <div><span class="section-kicker">YOUR OWN TIME</span><h2>你自己的时间</h2></div>
+              <div id="energyPips" class="energy-pips" aria-label="剩余行动力"></div>
+            </div>
+            <div id="actionGrid" class="action-grid"></div>
+            <div class="look-head">不占时间的事</div>
+            <div id="lookRow" class="look-row"></div>
+            <button id="endWeekBtn" class="end-week-btn" disabled>还有行动力未使用</button>
+          </section>
+
+          <section class="paper-card log-card">
+            <div class="section-head"><h2>班主任手记</h2><button id="clearLogBtn" class="text-btn">收起旧记录</button></div>
+            <div id="eventLog" class="event-log"></div>
+          </section>
+        </section>
+
+        <aside class="right-rail">
+          <section class="paper-card student-panel">
+            <div class="section-head"><div><span class="section-kicker">CLASS ROSTER</span><h2>需要你的人</h2></div><span id="studentCount">48 人</span></div>
+            <div id="studentList" class="student-list"></div>
+          </section>
+
+          <section class="paper-card story-card">
+            <div class="section-head"><h2>桌上的便签</h2><span id="storyProgress">空的</span></div>
+            <div id="storyList" class="story-list"></div>
+          </section>
+        </aside>
+      </div>
+    </main>
+
+    <div id="modalBackdrop" class="modal-backdrop hidden" role="presentation">
+      <section id="modal" class="modal paper-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <button id="modalClose" class="modal-close" aria-label="关闭">×</button>
+        <div id="modalEyebrow" class="section-kicker">校园事件</div>
+        <h2 id="modalTitle">标题</h2>
+        <div id="modalBody" class="modal-body"></div>
+        <div id="modalChoices" class="modal-choices"></div>
+      </section>
+    </div>
+
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
