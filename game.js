@@ -225,6 +225,38 @@ function buildRoster(){
   }));
 }
 
+// ── 班上的说法：每个人都有一件跟分数无关、但全班都知道的小事 ─────────
+const QUIRKS=[
+  "写作业永远先写最喜欢的那科，所以那科的作业总是第一个交",
+  "抽屉里常年备着三支同款笔，说是考试玄学，缺一支就心慌",
+  "能把圆周率背到一百位，但英语单词三天忘两页",
+  "值日拖地永远只拖自己那一列，拖得极其认真",
+  "传纸条被抓过一次之后改用眼神交流，现在全班都看得懂",
+  "书包里有一包吃了三个月还没吃完的话梅，谁问都说快吃完了",
+  "给每支笔都起了名字，涂卡那支叫「关键先生」",
+  "早读永远比别人高半个调，隔壁班都习惯了",
+  "错题本包了书皮，封面写着「再见了所有的错题」",
+  "去小卖部只买同一种面包，老板看见人影就开始拿货",
+  "打篮球前要把眼镜郑重地交给同桌保管，仪式感很足",
+  "笔记做得极漂亮，考前全班排队借，借出去要登记",
+  "有一套自己的天气预报，准确率高于电视台，依据是操场的旗子",
+  "座位周围永远是全班最干净的一平方米，扫帚自备",
+  "能模仿每个任课老师的口头禅，惟妙惟肖，就是从来不敢当面来",
+  "睡觉技术一流，下课铃响前十秒准时醒，从无失手"
+];
+const KEY_QUIRKS={
+  linxiaoyu:"错题本按颜色分了三层，别人借去也看不懂她的标记体系",
+  zhouyang:"教室后门的门框上有他起跳摸高的手印，一学期比一学期高",
+  suqing:"作文纸永远比别人多要一张，连草稿都写得像定稿",
+  chengmo:"上课转笔从来没掉过，数学老师说这叫角动量守恒",
+  luming:"耳机永远只戴一边——后来你才知道，另一边是留着听课的"
+};
+function quirkOf(s){
+  if(KEY_QUIRKS[s.id]) return KEY_QUIRKS[s.id];
+  const i=s.id&&s.id.startsWith("bg")?parseInt(s.id.slice(2))||0:Math.abs(s.name.charCodeAt(0));
+  return QUIRKS[Math.floor(jit(i+404)*QUIRKS.length)%QUIRKS.length];
+}
+
 // ── 分科：语文 150 / 数学 150 / 英语 150 / 综合 300 ──────────────────
 const SUBJECT_FULL={chinese:150,math:150,english:150,comp:300};
 const SUBJECT_NAME={chinese:"语文",math:"数学",english:"英语",comp:"综合"};
@@ -612,7 +644,8 @@ const ICONS = {
   moon:'<svg viewBox="0 0 24 24"><path d="M19 15.5A8 8 0 0 1 8.5 5a8 8 0 1 0 10.5 10.5z"/></svg>',
   sound:'<svg viewBox="0 0 24 24"><path d="M5 10h4l5-4v12l-5-4H5z"/><path d="M17 9c1 1 1 5 0 6M20 6c3 3 3 9 0 12"/></svg>',
   help:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.3 2.3 0 0 1 4.5.6c0 2-2.3 2.2-2.3 4M12 17.5h.01"/></svg>',
-  reset:'<svg viewBox="0 0 24 24"><path d="M4 4v6h6"/><path d="M5.5 15a8 8 0 1 0 .5-7l-2 2"/></svg>'
+  reset:'<svg viewBox="0 0 24 24"><path d="M4 4v6h6"/><path d="M5.5 15a8 8 0 1 0 .5-7l-2 2"/></svg>',
+  album:'<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 3v18M12 8l2 2 3-3"/></svg>'
 };
 
 // ── 周事件池：不重复抽取，部分事件带前置条件 ──────────────────────────
@@ -726,6 +759,116 @@ const WEEK_EVENTS = [
       {label:"重编一套，不再外发", hint:"你把损失自己吞了。从此每份卷子都要多花一倍时间。", eff:{teaching:-6,trust:4,morale:2}, flag:"swallowedLeak"}
     ]}
 ];
+
+// ── 闲笔：不是每周都出大事。有些周只是一只仓鼠、一首歌、一根绳子 ──────
+function pickBgStudent(pred){
+  const pool=active().filter(s=>!s.key&&(!pred||pred(s)));
+  return pool.length?pool[rint(0,pool.length-1)]:active()[0];
+}
+const LIGHT_MOMENTS=[
+  { id:"lm_hamster", build:()=>{
+      const s=state.students.find(x=>x.name==="高振宇"&&!x.out)||pickBgStudent();
+      return {title:"储物柜里有动静", portrait:portraitHTML(s),
+        text:`生活委员${s.name}的储物柜里传出窸窸窣窣的声音。打开一看，一只仓鼠，笼子上贴着标签：「高三（7）班编外学生 · 高考必胜」。全班都知道，就你不知道。养了多久，没人肯说。`,
+        choices:[
+          {label:"“留下可以。高考完带走。”",hint:"你多了四十八个同谋。周五起，笼子旁边开始定期出现菜叶。",eff:{morale:5,discipline:-3},flag:"hamsterStay"},
+          {label:"“校规就是校规，今天带回家。”",hint:`${s.name}抱着笼子走的时候，全班目送。那节课安静得过分。`,eff:{discipline:4,morale:-5}}]};
+    }},
+  { id:"lm_nickname", build:()=>({title:"楼梯口听来的外号",
+      text:"你在楼梯口听见两个学生聊天，提到一个外号。走出几步你才反应过来——说的是你。外号不难听，甚至有点贴切，这才是最气人的。",
+      choices:[
+        {label:"记下了，没吭声",hint:"第二天你在班上把这个外号自己说了出来。全班安静两秒，笑倒一片。",eff:{trust:4,morale:4,prestige:-2},flag:"nickKept"},
+        {label:"当场回头",hint:"两个人僵在原地。这个外号从此没人敢叫了——他们换了一个更难听的。",eff:{discipline:3,trust:-3}}]})},
+  { id:"lm_comic", build:()=>({title:"黑板右下角的连载",
+      text:"黑板右下角出现了四格漫画，一周一更，主角是个拿三角板的火柴人，发型和你一模一样。这周更新的那格里，火柴人说：「这道题不难。」底下画满了全班的问号。",
+      choices:[
+        {label:"在旁边画一格回应",hint:"你画得很丑。但连载从此多了一个角色，更新频率变成一周两更。",eff:{morale:5,trust:3,teaching:-1}},
+        {label:"擦掉。黑板是用来写字的",hint:"连载停更了。两周后你在一本作业本的背面看到了大结局。",eff:{discipline:3,morale:-3}}]})},
+  { id:"lm_radio", build:()=>({title:"课间广播点歌",
+      text:"周三课间，广播站放了一首老歌，点歌人落款「高三（7）班的四十八只青蛙」。第一句歌词是「最近比较烦」。班上笑作一团，隔壁班纷纷探头。",
+      choices:[
+        {label:"在后门站着听完",hint:"整首。有人看见了你，没人说破。",eff:{morale:4,trust:2,discipline:-1}},
+        {label:"查是谁点的",hint:"没查出来。倒是广播站从此不敢接七班的单子了。",eff:{discipline:2,morale:-3}}]})},
+  { id:"lm_eraser", build:()=>{
+      const s=state.students.find(x=>x.name==="张思远"&&!x.out)||pickBgStudent();
+      return {title:"橡皮占卜", portrait:portraitHTML(s),
+        text:`考试临近，班里流行起橡皮占卜：六个面写上 A、B、C、D 和「再想想」「相信自己」，不会的题就掷一把。${s.name}那块橡皮已经盘出包浆了。`,
+        choices:[
+          {label:"没收之前，先掷了一把",hint:"你掷出了「再想想」。全班起哄。橡皮照旧没收，但这一把大家记了很久。",eff:{morale:5,discipline:-2}},
+          {label:"统一没收，考场不许带",hint:"占卜风停了。有人在草稿纸上画了个骰子，聊胜于无。",eff:{discipline:4,morale:-4}}]};
+    }},
+  { id:"lm_cat", build:()=>({title:"后窗跳进来一只橘猫",
+      text:"一只橘猫从后窗跳进教室，径直走到讲台边坐下，熟练得不像第一次来。你看向全班，四十八张脸整齐地写着「我不知道」。窗台上有一排藏了很久的火腿肠。",
+      choices:[
+        {label:"“它可以旁听。别耽误做题。”",hint:"橘猫从此在最后一排有了固定座位。它睡觉的时候，那一片的自习格外安静。",eff:{morale:5,discipline:-2}},
+        {label:"关窗，把猫送出去",hint:"猫送走了。之后两周，总有人下课往操场那边看。",eff:{discipline:3,morale:-4}}]})},
+  { id:"lm_sleep", build:()=>{
+      const s=state.students.find(x=>x.name==="石斛"&&!x.out)||pickBgStudent();
+      return {title:"年级群里的照片", who:s, portrait:portraitHTML(s),
+        text:`体育老师转来一张照片：${s.name}在体操垫上睡着了，睡姿标准得像教学示范。配文已经在年级群传开：「高三（7）班，养精蓄锐」。`,
+        choices:[
+          {label:"回了一句：说明我们班心态好",hint:`年级群难得笑了一次。${s.name}第二天顶着表情包上学，泰然自若。`,eff:{morale:4,prestige:-2}},
+          {label:"把人叫来，问问作息",hint:`${TA(s)}说晚上两点睡，在打一个通关过很多遍的游戏。你们聊了十分钟游戏。`,eff:{trust:6,stress:-4,teaching:-1}}]};
+    }},
+  { id:"lm_tug", req:s=>s.week>=4, build:()=>{
+      const s=state.students.find(x=>x.name==="吴俊熙"&&!x.out)||pickBgStudent();
+      return {title:"运动会只剩最后一个项目", portrait:portraitHTML(s),
+        text:`春季运动会压轴是拔河，对面是高三（1）班，陈海站在队伍最前面压阵。体育委员${s.name}回头看你，意思很明显：老师，上不上？`,
+        choices:[
+          {label:"把外套脱了，排在最后一个",hint:"绳子那头是实验班，这头是你和四十七个人。赢了。那天下午没人做题，你也没催。",eff:{morale:8,teaching:-3},flag:"tugWin"},
+          {label:"站在边上喊加油",hint:`输了半米。${s.name}说，老师你要是上了肯定赢。你说行，明年。这话你们俩都没接下去。`,eff:{teaching:2,morale:-2}}]};
+    }},
+  { id:"lm_snack", build:()=>{
+      const boss=pickBgStudent(x=>x.study<60);
+      return {title:"抽屉里的辣条生意", portrait:portraitHTML(boss),
+        text:`纪律委员来报：晚自习有人用抽屉做辣条生意，明码标价，还能赊账。老板是${boss.name}。账本你看到了——记得比${TA(boss)}的数学作业工整十倍。`,
+        choices:[
+          {label:"罚老板请全班吃一次，免费",hint:"「破产清算」那天全班分辣条，老板肉疼但骄傲。生意再没做过，账本留着当了纪念。",eff:{morale:5,trust:2,discipline:-1}},
+          {label:"取缔，账本没收",hint:"生意转入地下，价格涨了五毛。",eff:{discipline:3,morale:-3}}]};
+    }},
+  { id:"lm_countdown2", build:()=>({title:"倒计时牌的小字",
+      text:"后门的高考倒计时牌下面，不知什么时候多了一行小字：「也是距离食堂三楼新窗口开业」。字很小，但全班都知道。擦倒计时的值日生每天都小心地绕开那行字。",
+      choices:[
+        {label:"假装没看见",hint:"那行小字活到了高考前一天。最后一天，有人在后面补了个句号。",eff:{morale:3,discipline:-1}},
+        {label:"让值日生一起擦掉",hint:"擦掉了。第二天出现在了前门。",eff:{discipline:2,morale:-2}}]})}
+];
+function drawLight(){
+  const used=state.usedLights||[];
+  const pool=LIGHT_MOMENTS.filter(e=>!used.includes(e.id)&&(!e.req||e.req(state)));
+  if(!pool.length) return null;
+  return pool[rint(0,pool.length-1)];
+}
+function showLight(ev,next){
+  state.usedLights=(state.usedLights||[]).concat(ev.id);
+  const d=ev.build();
+  const p=d.portrait||'<div class="event-portrait portrait-xuhui"></div>';
+  openModal({eyebrow:"教室一角",title:d.title,
+    body:`<div class="event-scene">${p}<div class="dialogue">${d.text}</div></div>`,
+    choices:d.choices.map(c=>({label:c.label,hint:c.hint,onChoose:()=>{
+      const del=applyEff(c.eff,d.who||null); setFlag(c.flag); addLog(`${d.title}：${c.label}。`); closeModal(false);
+      showOutcome({title:c.label,text:c.hint,portrait:p,delta:del},next);
+    }}))});
+}
+
+// ── 日历彩蛋：有些日子不看课表，看日历 ────────────────────────────────
+const DATE_EGGS=[
+  { id:"eggFool", week:4, build:()=>({title:"四月一日备忘录",
+      text:"上周三是愚人节。你走进教室，讲台上放着一杯泡好的枸杞茶，黑板上写着「老师辛苦了」，全班坐姿标准得可疑。你喝到一半，杯底的跳跳糖开始炸。",
+      choices:[
+        {label:"面不改色，喝完，说了声谢谢",hint:"全班憋笑憋到内伤。这份定力后来被写进了至少七本周记。",eff:{morale:6,trust:3,discipline:-2},flag:"foolDrank"},
+        {label:"当场破功，笑出了声",hint:"计划圆满成功，策划组当场击掌。那节课前十分钟没法上。",eff:{morale:7,trust:2,discipline:-4}}]})},
+  { id:"eggMay4", week:8, build:()=>{
+      const s=state.students.find(x=>x.name==="周语彤"&&!x.out)||pickBgStudent();
+      return {title:"五月四日，十八岁", portrait:portraitHTML(s),
+        text:`学校统一办十八岁成人仪式，每人要收到一封家长的信。团支书${s.name}统计到最后发现，有三个孩子的信凑不齐——家长联系不上，或者说自己写不来。`,
+        choices:[
+          {label:"那三封，你来写",hint:"你写到了十一点多。仪式上没人知道哪三封是你写的，包括站在你旁边的同事。",eff:{trust:6,morale:4,teaching:-3},flag:"wroteLetters"},
+          {label:"让同桌互相写",hint:"同桌给同桌写。有几封写得比家长的还长。",eff:{morale:5,trust:2,discipline:-1}}]};
+    }}
+];
+function dueEgg(){
+  return DATE_EGGS.find(e=>e.week===state.week&&!(state.usedLights||[]).includes(e.id));
+}
 
 // ── 后果链：每个重大选择都会在若干周后回旋镖式兑现 ─────────────────────
 const CALLBACKS = [
@@ -857,7 +1000,7 @@ function save(){ try{ localStorage.setItem("afterBellSave",JSON.stringify(state)
 function loadSave(){ try { const x=JSON.parse(localStorage.getItem("afterBellSave")); return x&&x.version===6?x:null; } catch { return null; } }
 function dropSave(){ try{ localStorage.removeItem("afterBellSave"); }catch{} }
 
-function setFlag(k){ if(k) state.flags[k]={week:state.week}; }
+function setFlag(k){ if(!k) return; state.flags[k]={week:state.week}; if(FLAG_MEDALS[k]) unlockMedal(FLAG_MEDALS[k]); }
 function hasFlag(k){ return !!state.flags[k]; }
 
 function playTone(freq=520,duration=.06){
@@ -866,6 +1009,56 @@ function playTone(freq=520,duration=.06){
 }
 function toast(text){ const el=$("#toast");el.textContent=text;el.classList.add("show");clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove("show"),2200); }
 function addLog(text){ state.log.unshift({week:state.week,text});state.log=state.log.slice(0,18); }
+
+// ── 执教纪念册：跨局保存的名场面与结局集。不是奖杯，是你带过的每一届 ────
+const MEDALS=[
+  {id:"m_candle", name:"蜡烛与晚自习", desc:"停电那晚，你从值班室搬来了一箱蜡烛。", hint:"有些晚自习不用电。"},
+  {id:"m_canteen", name:"为一顿饭出头", desc:"食堂的事，你带头捅了上去。", hint:"有人吃坏了肚子，家长群在拍照。"},
+  {id:"m_saved", name:"接住了", desc:"把一个滑到边上的孩子拉了回来。", hint:"信号来的时候，你在看。"},
+  {id:"m_all5", name:"五条线都走到了头", desc:"一届之内，五个孩子的故事你都陪着走完了。", hint:"十二周的行动力不够全部走完——除非你把别的都放下。"},
+  {id:"m_chains", name:"班上的事都接住了", desc:"早恋、打架、逃课，三条事件链一届走完。", hint:"班上的每件事都有后半段。"},
+  {id:"m_noloss", name:"一个都没少", desc:"零人离班毕业，全班平均心情不低于 60。", hint:"毕业照上一个不缺，而且都在笑。"},
+  {id:"m_rank1", name:"平行班的天花板", desc:"高考排名压过实验班，年级第一。", hint:"一班从来不用担心生源——直到这一届。"},
+  {id:"m_journal", name:"批到最后一页", desc:"一届里认真回过 10 本以上周记。", hint:"四十八本里，你回过的那些。"},
+  {id:"m_visit", name:"熟门熟路", desc:"一届里家访 4 次以上。", hint:"有些事，进了那个门才看得见。"},
+  {id:"m_looker", name:"眼里有活", desc:"一届里「不占时间的事」做满 30 次。", hint:"翻作业、转走廊、站后门——看不看随你。"},
+  {id:"m_hamster", name:"编外学生", desc:"批准一只仓鼠留在高三（7）班，直到高考。", hint:"储物柜里有动静。"},
+  {id:"m_fool", name:"跳跳糖", desc:"愚人节那杯茶，你面不改色地喝完了。", hint:"四月的第一天，小心讲台上的杯子。"},
+  {id:"m_tug", name:"一根绳子的事", desc:"运动会拔河，你排在最后一个，赢了实验班。", hint:"力气这种事，跟年级排名没关系。"},
+  {id:"m_nick", name:"外号在编", desc:"知道了自己的外号，并且装作不知道。", hint:"他们私下不叫你老师。"},
+  {id:"m_letters", name:"三封信", desc:"成人仪式上，有三封家长的信是你写的。", hint:"五月四日，有人的信凑不齐。"}
+];
+const FLAG_MEDALS={candleNight:"m_candle",canteenFight:"m_canteen",hamsterStay:"m_hamster",foolDrank:"m_fool",tugWin:"m_tug",nickKept:"m_nick",wroteLetters:"m_letters"};
+const ENDINGS_ALL=["课上完了","就这么过去了","那天之后","有两张空课桌","第一名的代价","不只是一张高分答卷","他们记得你","逆袭的七班","挤进前三","比排名更长的回声","你也在这一届里","把每个人送到门口"];
+function loadMedals(){ try{ return JSON.parse(localStorage.getItem("afterBellMedals"))||{}; }catch{ return {}; } }
+let medals=loadMedals();
+function saveMedals(){ try{ localStorage.setItem("afterBellMedals",JSON.stringify(medals)); }catch{} }
+function unlockMedal(id){
+  if(medals[id]) return;
+  const m=MEDALS.find(x=>x.id===id); if(!m) return;
+  medals[id]=1; saveMedals();
+  setTimeout(()=>toast(`纪念册翻开了新的一页：${m.name}`),600);
+}
+function recordEnding(name){
+  medals._endings=medals._endings||{};
+  if(!medals._endings[name]){ medals._endings[name]=1; saveMedals(); }
+}
+function showMedals(){
+  medals=loadMedals();
+  const got=MEDALS.filter(m=>medals[m.id]).length;
+  const grid=MEDALS.map(m=>medals[m.id]
+    ?`<div class="medal-item"><strong>${m.name}</strong><small>${m.desc}</small></div>`
+    :`<div class="medal-item locked"><strong>？？？</strong><small>${m.hint}</small></div>`).join("");
+  const ends=medals._endings||{};
+  const seen=ENDINGS_ALL.filter(e=>ends[e]).length;
+  const endRow=ENDINGS_ALL.map(e=>ends[e]?`<span class="end-chip got">${e}</span>`:`<span class="end-chip">？？？</span>`).join("");
+  openModal({eyebrow:"执教纪念册",title:"带过的每一届，都写在这里",
+    body:`<p>名场面 <b>${got}</b> / ${MEDALS.length} · 见过的结局 <b>${seen}</b> / ${ENDINGS_ALL.length}。跨届保存在本机。</p>
+    <div class="medal-grid">${grid}</div>
+    <div class="report-label" style="margin-top:16px">毕业结局集</div>
+    <div class="end-collect">${endRow}</div>`,
+    choices:[{label:"合上纪念册",onChoose:()=>closeModal()}],dismissible:true});
+}
 
 const CLASS_KEYS=["teaching","morale","discipline","trust","prestige"];
 const STU_KEYS=["study","mood","trust","stress"];
@@ -955,6 +1148,7 @@ function lockZoom(){
 function boot(){
   lockZoom();
   $("#soundBtn").innerHTML=ICONS.sound; $("#helpBtn").innerHTML=ICONS.help; $("#resetBtn").innerHTML=ICONS.reset;
+  const mb=$("#medalBtn"); if(mb){ mb.innerHTML=ICONS.album; mb.addEventListener("click",showMedals); }
   const saved=loadSave();
   let resume=false;                       // 之前靠按钮文案判断续档，文案改过之后永远读不到存档
   if(saved&&!saved.finished){
@@ -1506,24 +1700,58 @@ function showSeats(){
 
 // ── 不占行动力的日常：不改数值，只让你看见班上正在发生什么 ────────────
 const LOOKS=[
-  {id:"homework",name:"翻作业本",desc:"四十八本，一本一分钟",
+  {id:"homework",name:"翻作业本",desc:"翻几本是几本",
    run:()=>{
-     const bad=byNeed(active()).slice(0,3);
-     const rows=bad.map(x=>{
+     const need=byNeed(active()).slice(0,3);
+     const others=active().filter(x=>!need.includes(x));
+     const happy=[...others].sort((a,b)=>b.mood-a.mood)[0]||others[0];
+     const rest=others.filter(x=>x!==happy);
+     const r1=rest[rint(0,rest.length-1)], r2=rest.filter(x=>x!==r1)[rint(0,rest.length-2)]||r1;
+     const tell=x=>{
        const w=x.lastSub?weakSubject(x.lastSub):null;
-       return `<li><b>${x.name}</b>（${x.tag}）——${x.stress>=82?"字迹潦草，后面三页空着":x.stress>=72?"做完了，但一半是抄的答案":"做得很认真"}${w?`。${w}那本一直没交`:""}</li>`;
-     }).join("");
-     const good=[...active()].sort((a,b)=>b.mood-a.mood)[0];
-     return {title:"四十八本作业",body:`<ul class="report-list">${rows}<li><b>${good.name}</b>在最后一页画了一只很小的猫。</li></ul>`};
+       return (x.stress>=82?"字迹越写越潦草，最后三页是空的。":x.stress>=72?"做完了，但一半是照答案抄的。":"做得意外地认真。")+(w?`${w}那本一直没交。`:"");
+     };
+     const books=[
+       {s:need[0],t:tell(need[0])},{s:need[1],t:tell(need[1])},{s:need[2],t:tell(need[2])},
+       {s:happy,t:`最后一页的角落画了一只很小的猫，旁边写着：老师应该看不到这里。`},
+       {s:r1,t:`每道大题后面都给自己写了批注，最新一条是：这次真的懂了（第四次）。`},
+       {s:r2,t:`本子后面夹着一张手绘的「错题率走势图」，画得像股票，还标了「抄底点」。`}
+     ];
+     return {title:"桌上摞着四十八本",
+       body:`<p>今晚肯定翻不完全部。点开几本，翻几本是几本。</p><div class="hw-grid">${
+         books.map((b,i)=>`<button class="hw-book" data-hw="${i}"><span>${b.s.name}</span><small>${b.s.tag}</small></button>`).join("")}</div>`,
+       bind:()=>{
+         $$('[data-hw]').forEach(btn=>btn.addEventListener("click",()=>{
+           const b=books[+btn.dataset.hw];
+           btn.classList.add("open"); btn.disabled=true;
+           btn.innerHTML=`<span>${b.s.name}</span><p>${b.t}</p>`;
+           playTone(480,.04);
+         }));
+       }};
    }},
-  {id:"corridor",name:"课间转一圈",desc:"走廊、水房、后门",
+  {id:"corridor",name:"课间转一圈",desc:"十分钟，走不完整层楼",
    run:()=>{
      const hot=active().filter(x=>x.stress>=78);
-     const pair=[...active()].sort((a,b)=>a.mood-b.mood).slice(0,2);
-     return {title:"课间十分钟",body:`<ul class="report-list">
-       ${hot.length?`<li>水房那边站着${hot.slice(0,2).map(x=>`<b>${x.name}</b>`).join("和")}，谁都没说话。</li>`:"<li>走廊上很吵。吵是好事。</li>"}
-       <li><b>${pair[0].name}</b>趴在桌上没出去，说不困，就是不想动。</li>
-       <li>后门口贴的倒计时又被人改了一个数字。</li></ul>`};
+     const low=[...active()].sort((a,b)=>a.mood-b.mood);
+     const spots=[
+       {k:"水房",t:hot.length?`水房那边站着${hot.slice(0,2).map(x=>`<b>${x.name}</b>`).join("和")}，谁都没说话，水接满了也没走。`:`水房排着队。有人在用凉水洗脸，说这样背书快。`},
+       {k:"教室后排",t:`<b>${low[0].name}</b>趴在桌上没出去，说不困，就是不想动。`},
+       {k:"后门口",t:`倒计时又被人改了一个数字。改的人手法越来越熟练，笔迹越来越放松。`},
+       {k:"走廊尽头",t:`几个人围着一部手机看年级群。看见你过来，手机以肉眼可见的速度消失了。`}
+     ];
+     let seen=0;
+     return {title:"课间十分钟",
+       body:`<p>十分钟，最多够你走两个地方。</p><div class="spot-grid">${
+         spots.map((p,i)=>`<button class="spot-btn" data-spot="${i}"><span>${p.k}</span></button>`).join("")}</div><p id="spotBell" class="echo-note" style="display:none">上课铃响了。剩下的地方，下周再说。</p>`,
+       bind:()=>{
+         $$('[data-spot]').forEach(btn=>btn.addEventListener("click",()=>{
+           const p=spots[+btn.dataset.spot];
+           btn.classList.add("open"); btn.disabled=true; seen++;
+           btn.innerHTML=`<span>${p.k}</span><p>${p.t}</p>`;
+           playTone(480,.04);
+           if(seen>=2){ $$('[data-spot]').forEach(b=>{ if(!b.classList.contains("open")) b.disabled=true; }); const bell=$("#spotBell"); if(bell) bell.style.display=""; }
+         }));
+       }};
    }},
   {id:"backdoor",name:"站后门听课",desc:"看别人怎么上你的班",
    run:()=>{
@@ -1543,6 +1771,7 @@ function doLook(l){
   const r=l.run();
   openModal({eyebrow:"这一周里",title:r.title,body:r.body+`<p class="echo-note">你什么也没做。只是看了看。</p>`,
     choices:[{label:"回办公室",onChoose:()=>{closeModal();render()}}]});
+  r.bind&&r.bind();
 }
 function renderLooks(){
   const el=$("#lookRow"); if(!el) return;
@@ -1873,6 +2102,7 @@ function showStudent(s){
       `<p style="opacity:.75">${s.stress>=80?`最近状态不太好。有空的话，找${TA(s)}说说话。`:"目前没什么特别的事。"}</p>`;
   openModal({eyebrow:`学生档案 · ${s.tag}`,title:s.name,
     body:`<div class="event-scene">${(s.portrait?`<div class="event-portrait ${s.portrait}"></div>`:avatarHTML(s).replace("student-avatar","event-portrait"))}<div>${info}</div></div>
+    ${s.out?"":`<p style="opacity:.8;font-size:.92em"><b>班上的说法：</b>${quirkOf(s)}。</p>`}
     <div class="result-grid"><div class="result-cell"><strong>${Math.round(s.study)}</strong><small>学业</small></div><div class="result-cell"><strong>${Math.round(s.mood)}</strong><small>心情</small></div><div class="result-cell"><strong>${Math.round(s.stress)}</strong><small>压力</small></div></div>
     ${s.strain?`<p style="color:#c0392b"><b>警告：</b>${TA(s)}已经处在崩溃边缘。再有一周不下降，就会永久退出。</p>`:""}
     <p><b>当前估分：</b>${projectedPersonal(s)} 分 · 预计可上 <b>${bandOf(projectedPersonal(s)).tier}</b>（${bandOf(projectedPersonal(s)).cut}）</p>
@@ -2041,6 +2271,7 @@ function crisisStageModal(s,next){
 function crisisEasedModal(s,next){
   state.stats.trust=clamp(state.stats.trust+4);
   addLog(`${s.name}的状态明显好转了。`);
+  unlockMedal("m_saved");
   openModal({eyebrow:"缓过来了",title:`${s.name} 今天笑了一下`,
     body:`<div class="event-scene">${portraitHTML(s)}<div class="dialogue">“老师，我这周睡得挺好的。真的。”</div></div>
     <p>他把没写完的作业补交了。这件事不会写进任何一份材料里，但你知道它发生过。</p>`,
@@ -2141,12 +2372,16 @@ function endWeek(){
     if(pta) steps.push(n=>showPTA(pta,n));
     const ch=activeChainDue();
     if(ch) steps.push(n=>showChain(ch,n));
+    // 日历上的日子，到了就是到了——不参与抽签
+    const egg=dueEgg();
+    if(egg) steps.push(n=>showLight(egg,n));
     // 没有旧账要结，才轮到新的事情发生
     if(!cbs.length&&!ch&&!pta){
       const r=rand(), fresh=newChainAvailable();
       if(fresh&&r<.42) steps.push(n=>showChain(fresh,n));
-      else if(r<.64){ const st=drawStaffEvent(); if(st) steps.push(n=>showStaffEvent(st,n)); else { const ev=drawEvent(); if(ev) steps.push(n=>showEvent(ev,n)); } }
-      else if(r<.80) steps.push(n=>showStudentAsk(n));
+      else if(r<.58){ const st=drawStaffEvent(); if(st) steps.push(n=>showStaffEvent(st,n)); else { const ev=drawEvent(); if(ev) steps.push(n=>showEvent(ev,n)); } }
+      else if(r<.72) steps.push(n=>showStudentAsk(n));
+      else if(r<.82){ const lm=drawLight(); if(lm) steps.push(n=>showLight(lm,n)); else { const ev=drawEvent(); if(ev) steps.push(n=>showEvent(ev,n)); } }
       else { const ev=drawEvent(); if(ev) steps.push(n=>showEvent(ev,n)); }
     }
   }
@@ -2231,6 +2466,23 @@ function weeklyReport(next){
   if(risky.length>1) lines.push(`<li>压力过 80 的一共 ${risky.length} 个人。</li>`);
   pending.forEach((x,i)=>lines.push(`<li><b>${x.name}</b>${PAUSED[(state.week+i)%PAUSED.length]}。</li>`));
   if(state.crisis&&state.crisis.id){ const c=studentById(state.crisis.id); if(c&&!c.out) lines.push(`<li style="color:#c0392b"><b>${c.name}</b>这周还是那个样子。</li>`); }
+  // 闲笔：手记里也会记一些跟分数无关的事
+  if(rand()<.5){
+    const a=active(), sl=a[rint(0,a.length-1)];
+    const L=[
+      `${sl.name}这周把橡皮切成了两半，说一半要留着高考用。`,
+      `${sl.name}在课本侧面画的翻页小人动画更新了，剧情进展到主角学会了二段跳。`,
+      `${sl.name}的水杯里泡的东西，这周看起来更像中药了。`,
+      `倒计时牌旁边多了一行小字：「也距离暑假」。没人承认是谁写的。`,
+      `${sl.name}打饭的速度刷新了纪录：从教室到食堂窗口，一分五十秒。`,
+      `第三组不知何时集体换上了同款红色笔袋，上面印着「过过过」。`,
+      `${sl.name}背书的音量毫无长进，前后桌已经会背${TA(sl)}那一篇了。`,
+      `扫地的时候从讲台底下扫出七个粉笔头和一张三年前的假条。`
+    ];
+    lines.push(`<li style="opacity:.85">${L[rint(0,L.length-1)]}</li>`);
+  }
+  const goodPair=(state.seats||[]).map(([x,y])=>[studentById(x),studentById(y)]).find(([a2,b2])=>a2&&b2&&seatChemistry(a2,b2)===2);
+  if(goodPair&&rand()<.35) lines.push(`<li style="opacity:.85"><b>${goodPair[0].name}</b>和<b>${goodPair[1].name}</b>把两张桌子拼得越来越近，美其名曰「学习共同体」。</li>`);
   if(!lines.length) lines.push("<li>这一周班上没出什么事。</li>");
 
   const proj=projectedScore(), rk=1+state.rivals.filter(r=>r.score>proj).length;
@@ -2550,6 +2802,16 @@ function finishGame(score,rank,examBody){
   else if(hasFlag("delayedHealth")&&hasFlag("pushedThrough")){ ending="你也在这一届里"; verdict="学生都送出去了。第二天你才想起抽屉里那张体检单。"; }
   else { ending="把每个人送到门口"; verdict="不算漂亮的一届。但没有人在半路掉队。"; }
 
+  // 纪念册：这一届留下的页码
+  recordEnding(ending);
+  if(completed>=5) unlockMedal("m_all5");
+  if(((state.chains&&state.chains.done)||[]).length>=3) unlockMedal("m_chains");
+  if(!lost&&!state.incident&&avgMood>=60) unlockMedal("m_noloss");
+  if(rank===1) unlockMedal("m_rank1");
+  if((state.journalTotal||0)>=10) unlockMedal("m_journal");
+  if((state.visits||0)>=4) unlockMedal("m_visit");
+  if((state.lookTotal||0)>=30) unlockMedal("m_looker");
+
   keyStudents().forEach(s=>s.admission=admissionFor(s));
   const admitted=keyStudents().filter(s=>s.admission.cls==="high"||s.admission.cls==="special").length;
   const rows=keyStudents().map(s=>{
@@ -2617,7 +2879,9 @@ function showHelp(){
     <p><b>有些事会自己找上门：</b>几个孩子会在某一周带着自己的麻烦出现在你面前，不消耗行动力。之后要不要继续听下去，取决于你愿不愿意花“个别谈心”。没接着往下走的事，就停在半路。</p>
     <p><b>撑不住的时候：</b>长期高压最先垮掉的是成绩——考砸、复读、读大专，绝大多数是这个结局。真正办手续离开的，一届最多一两个。</p>
     <p><b>但也有例外。</b>如果一个孩子一路滑到底，会有人来提醒你，一次比一次清楚。信号最多来三次。第三次之后，就没有提醒了。</p>
-    <p><b>四次大考：</b>三月底月考、四月下旬期中、五月中一模、六月七号高考。高压学生有较大概率发挥失常；被你真正接住的学生可能超常发挥。</p>`,
+    <p><b>四次大考：</b>三月底月考、四月下旬期中、五月中一模、六月七号高考。高压学生有较大概率发挥失常；被你真正接住的学生可能超常发挥。</p>
+    <p><b>不是每周都出大事。</b>有些周找上门的只是一只仓鼠、一首点给全班的歌、或者一根拔河的绳子。这些事也要你拿主意。</p>
+    <p><b>执教纪念册</b>（右上角的册子）跨届保存：名场面、见过的结局，都会留在里面。带的届数多了，册子会越来越厚。</p>`,
     choices:[{label:"明白了",onChoose:()=>closeModal()}],dismissible:true});
 }
 function confirmReset(){
