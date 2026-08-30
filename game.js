@@ -761,15 +761,21 @@ const WEEK_EVENTS = [
 ];
 
 // ── 闲笔：不是每周都出大事。有些周只是一只仓鼠、一首歌、一根绳子 ──────
+// 闲笔不拿正在下坠的孩子开玩笑：危机中的、压力过线的,都不出现在笑点里
+function okForLight(s){ return s&&!s.out&&s.stress<78&&!(state.crisis&&state.crisis.id===s.id); }
 function pickBgStudent(pred){
-  const pool=active().filter(s=>!s.key&&(!pred||pred(s)));
+  const pool=active().filter(s=>!s.key&&okForLight(s)&&(!pred||pred(s)));
   return pool.length?pool[rint(0,pool.length-1)]:active()[0];
+}
+function namedOrBg(name){
+  const s=state.students.find(x=>x.name===name&&!x.out);
+  return okForLight(s)?{s,named:true}:{s:pickBgStudent(),named:false};
 }
 const LIGHT_MOMENTS=[
   { id:"lm_hamster", build:()=>{
-      const s=state.students.find(x=>x.name==="高振宇"&&!x.out)||pickBgStudent();
+      const {s,named}=namedOrBg("高振宇");
       return {title:"储物柜里有动静", portrait:portraitHTML(s),
-        text:`生活委员${s.name}的储物柜里传出窸窸窣窣的声音。打开一看，一只仓鼠，笼子上贴着标签：「高三（7）班编外学生 · 高考必胜」。全班都知道，就你不知道。养了多久，没人肯说。`,
+        text:`${named?"生活委员":""}${s.name}的储物柜里传出窸窸窣窣的声音。打开一看，一只仓鼠，笼子上贴着标签：「高三（7）班编外学生 · 高考必胜」。全班都知道，就你不知道。养了多久，没人肯说。`,
         choices:[
           {label:"“留下可以。高考完带走。”",hint:"你多了四十八个同谋。周五起，笼子旁边开始定期出现菜叶。",eff:{morale:5,discipline:-3},flag:"hamsterStay"},
           {label:"“校规就是校规，今天带回家。”",hint:`${s.name}抱着笼子走的时候，全班目送。那节课安静得过分。`,eff:{discipline:4,morale:-5}}]};
@@ -790,7 +796,7 @@ const LIGHT_MOMENTS=[
         {label:"在后门站着听完",hint:"整首。有人看见了你，没人说破。",eff:{morale:4,trust:2,discipline:-1}},
         {label:"查是谁点的",hint:"没查出来。倒是广播站从此不敢接七班的单子了。",eff:{discipline:2,morale:-3}}]})},
   { id:"lm_eraser", build:()=>{
-      const s=state.students.find(x=>x.name==="张思远"&&!x.out)||pickBgStudent();
+      const {s}=namedOrBg("张思远");
       return {title:"橡皮占卜", portrait:portraitHTML(s),
         text:`考试临近，班里流行起橡皮占卜：六个面写上 A、B、C、D 和「再想想」「相信自己」，不会的题就掷一把。${s.name}那块橡皮已经盘出包浆了。`,
         choices:[
@@ -803,7 +809,7 @@ const LIGHT_MOMENTS=[
         {label:"“它可以旁听。别耽误做题。”",hint:"橘猫从此在最后一排有了固定座位。它睡觉的时候，那一片的自习格外安静。",eff:{morale:5,discipline:-2}},
         {label:"关窗，把猫送出去",hint:"猫送走了。之后两周，总有人下课往操场那边看。",eff:{discipline:3,morale:-4}}]})},
   { id:"lm_sleep", build:()=>{
-      const s=state.students.find(x=>x.name==="石斛"&&!x.out)||pickBgStudent();
+      const {s}=namedOrBg("石斛");
       return {title:"年级群里的照片", who:s, portrait:portraitHTML(s),
         text:`体育老师转来一张照片：${s.name}在体操垫上睡着了，睡姿标准得像教学示范。配文已经在年级群传开：「高三（7）班，养精蓄锐」。`,
         choices:[
@@ -811,15 +817,15 @@ const LIGHT_MOMENTS=[
           {label:"把人叫来，问问作息",hint:`${TA(s)}说晚上两点睡，在打一个通关过很多遍的游戏。你们聊了十分钟游戏。`,eff:{trust:6,stress:-4,teaching:-1}}]};
     }},
   { id:"lm_tug", req:s=>s.week>=4, build:()=>{
-      const s=state.students.find(x=>x.name==="吴俊熙"&&!x.out)||pickBgStudent();
+      const {s,named}=namedOrBg("吴俊熙");
       return {title:"运动会只剩最后一个项目", portrait:portraitHTML(s),
-        text:`春季运动会压轴是拔河，对面是高三（1）班，陈海站在队伍最前面压阵。体育委员${s.name}回头看你，意思很明显：老师，上不上？`,
+        text:`春季运动会压轴是拔河，对面是高三（1）班，陈海站在队伍最前面压阵。${named?"体育委员":""}${s.name}回头看你，意思很明显：老师，上不上？`,
         choices:[
           {label:"把外套脱了，排在最后一个",hint:"绳子那头是实验班，这头是你和四十七个人。赢了。那天下午没人做题，你也没催。",eff:{morale:8,teaching:-3},flag:"tugWin"},
           {label:"站在边上喊加油",hint:`输了半米。${s.name}说，老师你要是上了肯定赢。你说行，明年。这话你们俩都没接下去。`,eff:{teaching:2,morale:-2}}]};
     }},
   { id:"lm_snack", build:()=>{
-      const boss=pickBgStudent(x=>x.study<60);
+      const boss=pickBgStudent(x=>x.study<62)||pickBgStudent();
       return {title:"抽屉里的辣条生意", portrait:portraitHTML(boss),
         text:`纪律委员来报：晚自习有人用抽屉做辣条生意，明码标价，还能赊账。老板是${boss.name}。账本你看到了——记得比${TA(boss)}的数学作业工整十倍。`,
         choices:[
@@ -832,7 +838,10 @@ const LIGHT_MOMENTS=[
         {label:"假装没看见",hint:"那行小字活到了高考前一天。最后一天，有人在后面补了个句号。",eff:{morale:3,discipline:-1}},
         {label:"让值日生一起擦掉",hint:"擦掉了。第二天出现在了前门。",eff:{discipline:2,morale:-2}}]})}
 ];
+// 出过那件事之后，这个班不再有闲笔。危机走到最后关头的那几周，也没有
+function lightAllowed(){ return !state.incident && !(state.crisis&&state.crisis.id&&state.crisis.stage>=2); }
 function drawLight(){
+  if(!lightAllowed()) return null;
   const used=state.usedLights||[];
   const pool=LIGHT_MOMENTS.filter(e=>!used.includes(e.id)&&(!e.req||e.req(state)));
   if(!pool.length) return null;
@@ -858,15 +867,16 @@ const DATE_EGGS=[
         {label:"面不改色，喝完，说了声谢谢",hint:"全班憋笑憋到内伤。这份定力后来被写进了至少七本周记。",eff:{morale:6,trust:3,discipline:-2},flag:"foolDrank"},
         {label:"当场破功，笑出了声",hint:"计划圆满成功，策划组当场击掌。那节课前十分钟没法上。",eff:{morale:7,trust:2,discipline:-4}}]})},
   { id:"eggMay4", week:8, build:()=>{
-      const s=state.students.find(x=>x.name==="周语彤"&&!x.out)||pickBgStudent();
+      const {s,named}=namedOrBg("周语彤");
       return {title:"五月四日，十八岁", portrait:portraitHTML(s),
-        text:`学校统一办十八岁成人仪式，每人要收到一封家长的信。团支书${s.name}统计到最后发现，有三个孩子的信凑不齐——家长联系不上，或者说自己写不来。`,
+        text:`学校统一办十八岁成人仪式，每人要收到一封家长的信。${named?"团支书":""}${s.name}统计到最后发现，有三个孩子的信凑不齐——家长联系不上，或者说自己写不来。`,
         choices:[
           {label:"那三封，你来写",hint:"你写到了十一点多。仪式上没人知道哪三封是你写的，包括站在你旁边的同事。",eff:{trust:6,morale:4,teaching:-3},flag:"wroteLetters"},
           {label:"让同桌互相写",hint:"同桌给同桌写。有几封写得比家长的还长。",eff:{morale:5,trust:2,discipline:-1}}]};
     }}
 ];
 function dueEgg(){
+  if(!lightAllowed()) return null;   // 那样的一周，日历上的日子也过不成
   return DATE_EGGS.find(e=>e.week===state.week&&!(state.usedLights||[]).includes(e.id));
 }
 
@@ -1409,7 +1419,7 @@ function showChain(ch,next){
       addLog(`${st.title(a,b)}：${TX(ch2.label,TA(a))}`);
       const cur=CHAINS[c.active];
       c.stage++;
-      if(c.stage>=cur.stages.length){ c.done.push(c.active); c.active=null; c.stage=0; c.nextWeek=0; }
+      if(c.stage>=cur.stages.length){ c.done.push(c.active); c.active=null; c.stage=0; c.nextWeek=0; state.chainsFinished=(state.chainsFinished||0)+1; }
       else {
         const g=cur.stages[c.stage].gap||2;
         const at=cur.stages[c.stage].notBefore||0;
@@ -2466,9 +2476,9 @@ function weeklyReport(next){
   if(risky.length>1) lines.push(`<li>压力过 80 的一共 ${risky.length} 个人。</li>`);
   pending.forEach((x,i)=>lines.push(`<li><b>${x.name}</b>${PAUSED[(state.week+i)%PAUSED.length]}。</li>`));
   if(state.crisis&&state.crisis.id){ const c=studentById(state.crisis.id); if(c&&!c.out) lines.push(`<li style="color:#c0392b"><b>${c.name}</b>这周还是那个样子。</li>`); }
-  // 闲笔：手记里也会记一些跟分数无关的事
-  if(rand()<.5){
-    const a=active(), sl=a[rint(0,a.length-1)];
+  // 闲笔：手记里也会记一些跟分数无关的事——但出过事的班里没有闲笔
+  if(lightAllowed()&&rand()<.5){
+    const pool=active().filter(okForLight), a=pool.length?pool:active(), sl=a[rint(0,a.length-1)];
     const L=[
       `${sl.name}这周把橡皮切成了两半，说一半要留着高考用。`,
       `${sl.name}在课本侧面画的翻页小人动画更新了，剧情进展到主角学会了二段跳。`,
@@ -2482,7 +2492,7 @@ function weeklyReport(next){
     lines.push(`<li style="opacity:.85">${L[rint(0,L.length-1)]}</li>`);
   }
   const goodPair=(state.seats||[]).map(([x,y])=>[studentById(x),studentById(y)]).find(([a2,b2])=>a2&&b2&&seatChemistry(a2,b2)===2);
-  if(goodPair&&rand()<.35) lines.push(`<li style="opacity:.85"><b>${goodPair[0].name}</b>和<b>${goodPair[1].name}</b>把两张桌子拼得越来越近，美其名曰「学习共同体」。</li>`);
+  if(goodPair&&lightAllowed()&&rand()<.35) lines.push(`<li style="opacity:.85"><b>${goodPair[0].name}</b>和<b>${goodPair[1].name}</b>把两张桌子拼得越来越近，美其名曰「学习共同体」。</li>`);
   if(!lines.length) lines.push("<li>这一周班上没出什么事。</li>");
 
   const proj=projectedScore(), rk=1+state.rivals.filter(r=>r.score>proj).length;
@@ -2805,7 +2815,7 @@ function finishGame(score,rank,examBody){
   // 纪念册：这一届留下的页码
   recordEnding(ending);
   if(completed>=5) unlockMedal("m_all5");
-  if(((state.chains&&state.chains.done)||[]).length>=3) unlockMedal("m_chains");
+  if((state.chainsFinished||0)>=3) unlockMedal("m_chains");   // 只算真正跟到最后一幕的，中途断掉的不算
   if(!lost&&!state.incident&&avgMood>=60) unlockMedal("m_noloss");
   if(rank===1) unlockMedal("m_rank1");
   if((state.journalTotal||0)>=10) unlockMedal("m_journal");
