@@ -399,3 +399,19 @@ button,.student-item,.tt-cell,.desknote,.rival-item,[data-row],[data-student]{
   .hw-grid{grid-template-columns:repeat(2,1fr)}
   .medal-grid{grid-template-columns:1fr}
 }
+
+/* ── 故事时钟:走到哪一章、停了多久,一眼看得见 ─────────────────── */
+.story-clock{display:inline-flex;gap:4px;align-items:center;margin:0 2px;vertical-align:middle}
+.story-clock i{width:9px;height:9px;border-radius:50%;border:1.5px solid var(--teal);opacity:.55}
+.story-clock i.full{background:var(--teal);opacity:1}
+.story-clock.closed i{border-color:var(--muted)}
+.story-clock.closed i.full{background:var(--muted)}
+.story-clock.left i,.story-clock.gone i{border-color:#a09384;opacity:.4}
+.desknote.stalled .note-thread{color:#a4483a}
+.desknote.stalled:after{content:"";position:absolute;right:10px;top:10px;width:7px;height:7px;border-radius:50%;background:#c99a4b;box-shadow:0 0 0 3px rgba(201,154,75,.18)}
+
+/* ── 毕业纪念册:普通孩子的后日谈 ────────────────────────────── */
+.epi-row{display:grid;grid-template-columns:64px 1fr;gap:4px 12px;padding:9px 2px;border-bottom:1px dashed var(--line);align-items:baseline}
+.epi-row b{font-size:12.5px}
+.epi-row span{font-size:10.5px;color:var(--muted);grid-column:1;grid-row:2}
+.epi-row p{margin:0;grid-column:2;grid-row:1/3;font-size:12px;line-height:1.7;color:#4c615e}

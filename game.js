@@ -257,6 +257,48 @@ function quirkOf(s){
   return QUIRKS[Math.floor(jit(i+404)*QUIRKS.length)%QUIRKS.length];
 }
 
+// ── 经历标签：你为一个孩子做过的每件事都记着，毕业的时候一起还给你 ────
+function mark(s,tag){
+  if(!s||s.out||!tag) return;
+  s.marks=s.marks||[];
+  if(!s.marks.includes(tag)) s.marks.push(tag);
+}
+const MARK_PHRASE={journal:"认真回过周记",talked:"谈过心",tutored:"坐到身边补过课",called:"往家里打过电话",
+  visited:"去过家里",knocked:"接住过一次敲门",saved:"最难的时候你在",cat:"看到过那只猫",post:"托付过班务"};
+function marksLine(s){
+  const ps=(s.marks||[]).map(m=>MARK_PHRASE[m]).filter(Boolean);
+  return ps.length?`<p style="opacity:.8;font-size:.92em"><b>这学期，你为${TA(s)}：</b>${ps.join("、")}。</p>`:"";
+}
+// 毕业那天，每个普通孩子也有自己的一句话——由这一学期真实发生过的事拼出来
+function bgEpilogue(s){
+  const t=TA(s), M=s.marks||[], has=k=>M.includes(k);
+  if(s.out) return s.injured?`${dateOf(s.outWeek)}出的事。后来的每个月你都去看${t}。`
+    :`${dateOf(s.outWeek)}离开的，没能一起走到拍毕业照那天。`;
+  if(has("saved")) return `最难的那一段，是你陪着走过来的。毕业那天你桌上多了张没署名的字条——你认得那个字。`;
+  if(has("chain_romance")) return hasFlag("romCut")?`毕业照上，${t}和那个人隔了整整一排。那件事，你们谁都没再提过。`
+    :`毕业照上，${t}和那个人站在同一排。后来的事，你没有再问。`;
+  if(has("chain_fight")) return hasFlag("fightOpen")?`那个外号后来再没人叫过。${t}的毕业留言只有一句：谢谢那次班会。`
+    :`${t}毕业了。最后一排靠墙那个位置空下来以后，你还是会多看一眼。`;
+  if(has("chain_gaming")) return hasFlag("gameRole")?`${t}的志愿填了计算机。离校前，班级电脑的密码写在纸条上，压在你键盘底下。`
+    :hasFlag("gameLock")?`${t}考上了。谢师宴，${t}没来。`:`${t}后来的事，你是从别人那里听说的。`;
+  if(has("lm_hamster")) return hasFlag("hamsterStay")?`仓鼠被${t}带回了家，改名叫「上岸」。${t}说，它也算七班毕业的。`
+    :`毕业那天${t}提了一句：那只仓鼠在家里挺好的，就是一听下课铃就扒笼子。`;
+  if(has("lm_sleep")) return `那张睡姿标准的照片，${t}自己设成了头像，说要一直用到大学。`;
+  if(has("lm_snack")) return `那门辣条生意后来成了班里的传说。账本的下落，毕业时已经有三个版本。`;
+  if(has("lm_eraser")) return `那块包浆的橡皮考完最后一科正式退休。${t}说要留给复读的表哥。`;
+  if(has("cat")) return `毕业册最后一页又画了那只很小的猫。这次旁边写着：老师，谢谢你看到了。`;
+  if(has("post")) return `交接班务那天，${t}把本子理得整整齐齐，说下一届谁接谁头疼。`;
+  if(has("soared")) return `高考那两天，${t}是全班睡得最踏实的一个。分数下来，${t}第一个打给你。`;
+  if(has("visited")) return `你家访那天坐过的那张凳子，${t}家一直摆在原来的位置。`;
+  if(has("journal")) return `周记本${t}留下来了。你写过字的那一页，折了角。`;
+  if(has("knocked")) return `后来${t}跟人说起高三，说的不是分数，是那次你放下了手里的电话。`;
+  if(has("tutored")) return `你搬着椅子坐到${t}身边的那节课，被${t}写进了毕业留言。`;
+  if(has("called")) return `${t}妈妈的手机里，你的号码一直没删。`;
+  if(has("talked")) return `那次十分钟的谈话，${t}记得比你久。`;
+  if(has("stumbled")) return `最后考得不理想。${t}发来消息：老师，复读那年，还能去问你题吗。`;
+  return `毕业那天，${t}跟着人群喊了声“老师再见”。你们单独说过的话，加起来不到十句。`;
+}
+
 // ── 分科：语文 150 / 数学 150 / 英语 150 / 综合 300 ──────────────────
 const SUBJECT_FULL={chinese:150,math:150,english:150,comp:300};
 const SUBJECT_NAME={chinese:"语文",math:"数学",english:"英语",comp:"综合"};
@@ -667,7 +709,14 @@ const WEEK_EVENTS = [
     choices:[
       {label:"照原计划上", hint:"课有点乱，但学生真的在想。校长的本子记了很多行。", eff:{prestige:-3,teaching:5,trust:3,morale:3}, flag:"showedReal"},
       {label:"临时切回标准套路", hint:"四平八稳。校长挑不出错，学生也知道你今天在演给谁看。", eff:{prestige:5,teaching:1,trust:-4}, flag:"showedSafe"}
-    ]},
+    ],
+    variants:[{if:"foughtFaculty",
+      note:"教研会上你把数据拍在桌上的那一局，有人记到今天。",
+      text:"陈校长没提前通知，带着听课本坐进最后一排——旁边还坐着教研组长。今天恰好是你试验新教法的第一天。上次会上你摆了数据，这次他们要亲眼看。",
+      choices:[
+        {label:"照原计划上", hint:"课有点乱，但学生真的在想。教研组长的本子记了很多行，校长的本子合上了。", eff:{prestige:-1,teaching:6,trust:3,morale:3}, flag:"showedReal"},
+        {label:"临时切回标准套路", hint:"四平八稳。上次拍桌子的锐气，他们没看到。有人松了口气，也有人失望。", eff:{prestige:3,teaching:1,trust:-5}, flag:"showedSafe"}
+      ]}]},
   { id:"note", title:"一张没有署名的纸条", portrait:"portrait-xuhui",
     text:"讲台抽屉里有张纸条：“老师，如果努力了还是考不好，那努力还有用吗？”",
     choices:[
@@ -679,6 +728,22 @@ const WEEK_EVENTS = [
     choices:[
       {label:"在群里逐条回应，把话说完", hint:"你花了整整一晚。有家长道歉了，也有人退了群。", eff:{prestige:2,trust:5,morale:2}, flag:"defendedSelf"},
       {label:"沉默，让它自己过去", hint:"三天后没人再提。但办公室里已经开始有人绕着你走。", eff:{prestige:-6,trust:-2,morale:-3}, flag:"stayedSilent"}
+    ],
+    variants:[
+      {if:"canteenFight",
+       note:"食堂那件事，家长们记得。",
+       text:"你上周说的“分数不是唯一标准”被截了图，配文是“这样的班主任能带高三？”。转发刚起势，就有另一位家长回了一句：“食堂出事那次，是这位老师带头去查的。”",
+       choices:[
+         {label:"在群里逐条回应，把话说完", hint:"你花了一晚。这次道歉的人，比转发的人多。", eff:{prestige:4,trust:6,morale:2}, flag:"defendedSelf"},
+         {label:"沉默，让它自己过去", hint:"你没说话。替你说话的人不少，三天后这事就过去了。", eff:{prestige:-1,trust:1}, flag:"stayedSilent"}
+       ]},
+      {if:"canteenHush",
+       note:"食堂那笔被压下去的账，记在你名下。",
+       text:"你上周说的“分数不是唯一标准”被截了图，配文翻出了旧账：“食堂的事就是他压下去的，现在又说分数不重要？”已经转了四百多次。",
+       choices:[
+         {label:"在群里逐条回应，把话说完", hint:"两件事一起解释，越描越黑。你回消息回到凌晨一点。", eff:{prestige:-2,trust:2,morale:-1}, flag:"defendedSelf"},
+         {label:"沉默，让它自己过去", hint:"一周了还有人在转。办公室里绕着你走的人更多了。", eff:{prestige:-9,trust:-4,morale:-4}, flag:"stayedSilent"}
+       ]}
     ]},
   { id:"poach", title:"隔壁班的邀请", portrait:"portrait-principal", req:s=>!s.students.find(x=>x.id==="linxiaoyu").out,
     text:"高三（1）班主任想把林小雨借调去参加尖子生集训，为期六周。他说：为了学校的清北指标。",
@@ -697,7 +762,14 @@ const WEEK_EVENTS = [
     choices:[
       {label:"半夜去网吧把人带回来", hint:"你找到了他们。第二天全年级都知道七班班主任去网吧抓人。", eff:{discipline:8,trust:4,prestige:-4,morale:-2}, flag:"caughtThem"},
       {label:"第二天在班上等他们自己说", hint:"你给了台阶。两个人承认了，第三个人再也没提过。", eff:{trust:6,discipline:-5,morale:2}, flag:"waitedThem"}
-    ]},
+    ],
+    variants:[{if:"phoneRaid",
+      note:"那次全班搜手机，他们都还记得。",
+      text:"连续第三天了。保安说看见有学生从后墙翻出去，进了网吧。其中一个背影很像周扬。你在班上提了一句，教室里安静得能听见笔帽的声音——没有人看你。",
+      choices:[
+        {label:"半夜去网吧把人带回来", hint:"你找到了他们。第二天全年级都知道七班班主任去网吧抓人。", eff:{discipline:8,trust:2,prestige:-4,morale:-2}, flag:"caughtThem"},
+        {label:"第二天在班上等他们自己说", hint:"你等了一整节班会课。没有人站起来。搜过手机的班主任，等不来自首。", eff:{discipline:-7,trust:-4,morale:-3}, flag:"waitedThem"}
+      ]}]},
   { id:"gift", title:"办公桌上的纸袋", portrait:"portrait-principal",
     text:"某位家长走后，你的抽屉里多了一个信封。厚度很实在。他孩子下周要竞选保送推荐名额。",
     choices:[
@@ -715,6 +787,18 @@ const WEEK_EVENTS = [
     choices:[
       {label:"把信递上去", hint:"你替学生说了话。那位老师在楼道里跟你擦肩而过，没有看你。", eff:{trust:9,morale:5,prestige:-9}, flag:"sentPetition"},
       {label:"压下来，自己帮他们补物理", hint:"你多担了一门课。夜里的时间不够用了，你的课也开始将就。", eff:{teaching:-6,trust:6,morale:3}, flag:"heldPetition"}
+    ],
+    variants:[
+      {if:"postedRanks",
+       note:"签名的人里，有七个在你贴出去的后十名名单上。",
+       text:"三十一个签名，要求更换物理老师。信的末尾另有一行小字：「我们知道您也有难处，但请这次听我们一次。」签名的人里，有七个上过走廊里那张名单。",
+       choices:[
+         {label:"把信递上去", hint:"你替学生说了话。有人在楼道里跟你说了声谢谢——贴名单以来的第一声。", eff:{trust:12,morale:6,prestige:-9}, flag:"sentPetition"},
+         {label:"压下来，自己帮他们补物理", hint:"你多担了一门课。但这次他们不太信你真的会补——毕竟名单也是你贴的。", eff:{teaching:-6,trust:1,morale:0}, flag:"heldPetition"}
+       ]},
+      {if:"refusedRanks",
+       note:"他们记得你为那份名单写过情况说明。",
+       text:"三十一个签名，要求更换物理老师。信写得很克制，开头是：「老师，我们知道您会认真看完。」那位老师带了二十六年书，下学期就要退休。"}
     ]},
   { id:"checkup", title:"体检报告", portrait:"portrait-teacher",
     text:"甲状腺结节，建议三个月复查。复查日期正好卡在一模那一周。",
@@ -774,7 +858,7 @@ function namedOrBg(name){
 const LIGHT_MOMENTS=[
   { id:"lm_hamster", build:()=>{
       const {s,named}=namedOrBg("高振宇");
-      return {title:"储物柜里有动静", portrait:portraitHTML(s),
+      return {title:"储物柜里有动静", who:s, portrait:portraitHTML(s),
         text:`${named?"生活委员":""}${s.name}的储物柜里传出窸窸窣窣的声音。打开一看，一只仓鼠，笼子上贴着标签：「高三（7）班编外学生 · 高考必胜」。全班都知道，就你不知道。养了多久，没人肯说。`,
         choices:[
           {label:"“留下可以。高考完带走。”",hint:"你多了四十八个同谋。周五起，笼子旁边开始定期出现菜叶。",eff:{morale:5,discipline:-3},flag:"hamsterStay"},
@@ -797,7 +881,7 @@ const LIGHT_MOMENTS=[
         {label:"查是谁点的",hint:"没查出来。倒是广播站从此不敢接七班的单子了。",eff:{discipline:2,morale:-3}}]})},
   { id:"lm_eraser", build:()=>{
       const {s}=namedOrBg("张思远");
-      return {title:"橡皮占卜", portrait:portraitHTML(s),
+      return {title:"橡皮占卜", who:s, portrait:portraitHTML(s),
         text:`考试临近，班里流行起橡皮占卜：六个面写上 A、B、C、D 和「再想想」「相信自己」，不会的题就掷一把。${s.name}那块橡皮已经盘出包浆了。`,
         choices:[
           {label:"没收之前，先掷了一把",hint:"你掷出了「再想想」。全班起哄。橡皮照旧没收，但这一把大家记了很久。",eff:{morale:5,discipline:-2}},
@@ -826,7 +910,7 @@ const LIGHT_MOMENTS=[
     }},
   { id:"lm_snack", build:()=>{
       const boss=pickBgStudent(x=>x.study<62)||pickBgStudent();
-      return {title:"抽屉里的辣条生意", portrait:portraitHTML(boss),
+      return {title:"抽屉里的辣条生意", who:boss, portrait:portraitHTML(boss),
         text:`纪律委员来报：晚自习有人用抽屉做辣条生意，明码标价，还能赊账。老板是${boss.name}。账本你看到了——记得比${TA(boss)}的数学作业工整十倍。`,
         choices:[
           {label:"罚老板请全班吃一次，免费",hint:"「破产清算」那天全班分辣条，老板肉疼但骄傲。生意再没做过，账本留着当了纪念。",eff:{morale:5,trust:2,discipline:-1}},
@@ -854,7 +938,7 @@ function showLight(ev,next){
   openModal({eyebrow:"教室一角",title:d.title,
     body:`<div class="event-scene">${p}<div class="dialogue">${d.text}</div></div>`,
     choices:d.choices.map(c=>({label:c.label,hint:c.hint,onChoose:()=>{
-      const del=applyEff(c.eff,d.who||null); setFlag(c.flag); addLog(`${d.title}：${c.label}。`); closeModal(false);
+      const del=applyEff(c.eff,d.who||null); setFlag(c.flag); if(d.who) mark(d.who,ev.id); addLog(`${d.title}：${c.label}。`); closeModal(false);
       showOutcome({title:c.label,text:c.hint,portrait:p,delta:del},next);
     }}))});
 }
@@ -878,6 +962,35 @@ const DATE_EGGS=[
 function dueEgg(){
   if(!lightAllowed()) return null;   // 那样的一周，日历上的日子也过不成
   return DATE_EGGS.find(e=>e.week===state.week&&!(state.usedLights||[]).includes(e.id));
+}
+
+// ── 洗手间的镜子：越过的线攒到一定数目，你会撞见自己 ─────────────────
+function dueMirror(){
+  const h=state.hardLine||0;
+  if(h>=6&&!hasFlag("mirror2")) return 2;
+  if(h>=3&&!hasFlag("mirror1")) return 1;
+  return 0;
+}
+function mirrorModal(stage,next){
+  setFlag(stage===1?"mirror1":"mirror2");
+  openModal({eyebrow:"洗手间的镜子",title:stage===1?"你做决定越来越快了":"镜子里的人",
+    body:`<div class="event-scene"><div class="event-portrait portrait-teacher"></div><div class="dialogue">${
+      stage===1
+      ?"晚自习查完最后一轮，你在洗手间洗手。抬头的一瞬间，你在镜子里看见的表情，像极了你刚入职那年最怕变成的那种老师。水凉了半天，你才关掉。"
+      :"这学期你越过的线，一条条都数得出来。镜子里的人比三月瘦，眼神比三月硬。你想起走廊里听到的半句话——「别去找班主任了，没用。」"
+    }</div></div>`,
+    choices:[
+      {label:"分数要紧。这一届先这么带完",hint:"你把手擦干，回了教室。手不抖了——这才是让你后怕的地方。",onChoose:()=>{
+        const d=applyEff({teaching:3,trust:-3,morale:-2});
+        closeModal(false); addLog("你在洗手间站了一会儿，然后回去继续查自习。");
+        showOutcome({title:"分数要紧",text:"路还是这条路。只是你知道自己在哪儿拐过弯了。",portrait:'<div class="event-portrait portrait-teacher"></div>',delta:d},next);
+      }},
+      {label:"把节奏慢下来",hint:"第二天，你把贴着的、收着的、压着的，撤了一样。只有一样，但学生看见了。",onChoose:()=>{
+        const d=applyEff({teaching:-3,trust:4,morale:3});
+        closeModal(false); addLog("第二天你撤掉了一样东西。没解释，但全班都注意到了。");
+        showOutcome({title:"慢下来",text:"越过的线收不回来。但从今天起，可以不再多越一条。",portrait:'<div class="event-portrait portrait-teacher"></div>',delta:d},next);
+      }}
+    ]});
 }
 
 // ── 后果链：每个重大选择都会在若干周后回旋镖式兑现 ─────────────────────
@@ -986,6 +1099,18 @@ function initialState(subject="math") {
   };
   st.seats=buildSeats(st.students);
   st.tt=initTimetable();
+  // 上一届的口碑先你一步到了家长耳朵里
+  const lg=loadLegacy();
+  if(lg){
+    st.gen=(lg.gen||1)+1;
+    const rep=Math.max(-3,Math.min(3,lg.rep||0));
+    // 注意：initialState 在模块顶层就会被调用，此时 const clamp 还没初始化，这里只能用裸 Math
+    st.stats.trust=Math.max(0,Math.min(100,st.stats.trust+rep*2));
+    st.stats.prestige=Math.max(0,Math.min(100,st.stats.prestige+rep*2));
+    if(rep>=2) st.log.push({week:1,text:"报到那天有位家长说：早听说过您。您带的上一届，我们楼里就有一个。"});
+    else if(rep<=-2) st.log.push({week:1,text:"上一届的事，家长们多少听说了一些。开学第一周，问「能不能换班」的电话比往年多。"});
+    if(lg.incident) st.log.push({week:1,text:"有个名字没有人当着你的面提起。但你知道，每个家长都知道。"});
+  } else st.gen=1;
   return st;
 }
 
@@ -1010,7 +1135,15 @@ function save(){ try{ localStorage.setItem("afterBellSave",JSON.stringify(state)
 function loadSave(){ try { const x=JSON.parse(localStorage.getItem("afterBellSave")); return x&&x.version===6?x:null; } catch { return null; } }
 function dropSave(){ try{ localStorage.removeItem("afterBellSave"); }catch{} }
 
-function setFlag(k){ if(!k) return; state.flags[k]={week:state.week}; if(FLAG_MEDALS[k]) unlockMedal(FLAG_MEDALS[k]); }
+// 越线：每一次「分数（或自保）先于人」的选择都记在一条看不见的轨迹上，只加不减
+const HARD_FLAGS=["phoneRaid","ignoredNote","freeErased","postedRanks","keptMorning","fluPush","stormOn",
+  "canteenHush","lentAway","caved","keptPosting","hidBehindSchool","foldedUnderPressure","wroteThemOff",
+  "traded","heldPunish","romCut","fightReport","fightIgnore","gameLock","gameDrop"];
+function setFlag(k){
+  if(!k) return; state.flags[k]={week:state.week};
+  if(FLAG_MEDALS[k]) unlockMedal(FLAG_MEDALS[k]);
+  if(HARD_FLAGS.includes(k)) state.hardLine=(state.hardLine||0)+1;
+}
 function hasFlag(k){ return !!state.flags[k]; }
 
 function playTone(freq=520,duration=.06){
@@ -1049,6 +1182,10 @@ function unlockMedal(id){
   medals[id]=1; saveMedals();
   setTimeout(()=>toast(`纪念册翻开了新的一页：${m.name}`),600);
 }
+// ── 口碑跨届继承：这一届怎么收场，下一届的家长开学前就听说了 ──────────
+function loadLegacy(){ try{ return JSON.parse(localStorage.getItem("afterBellLegacy"))||null; }catch{ return null; } }
+function saveLegacy(x){ try{ localStorage.setItem("afterBellLegacy",JSON.stringify(x)); }catch{} }
+
 function recordEnding(name){
   medals._endings=medals._endings||{};
   if(!medals._endings[name]){ medals._endings[name]=1; saveMedals(); }
@@ -1062,8 +1199,9 @@ function showMedals(){
   const ends=medals._endings||{};
   const seen=ENDINGS_ALL.filter(e=>ends[e]).length;
   const endRow=ENDINGS_ALL.map(e=>ends[e]?`<span class="end-chip got">${e}</span>`:`<span class="end-chip">？？？</span>`).join("");
+  const lg=loadLegacy();
   openModal({eyebrow:"执教纪念册",title:"带过的每一届，都写在这里",
-    body:`<p>名场面 <b>${got}</b> / ${MEDALS.length} · 见过的结局 <b>${seen}</b> / ${ENDINGS_ALL.length}。跨届保存在本机。</p>
+    body:`<p>${lg?`你已经送走了 <b>${lg.gen}</b> 届。`:""}名场面 <b>${got}</b> / ${MEDALS.length} · 见过的结局 <b>${seen}</b> / ${ENDINGS_ALL.length}。跨届保存在本机。</p>
     <div class="medal-grid">${grid}</div>
     <div class="report-label" style="margin-top:16px">毕业结局集</div>
     <div class="end-collect">${endRow}</div>`,
@@ -1282,7 +1420,9 @@ const CHAINS={
     },
     stages:[
       { eyebrow:"晚自习之后", title:(a,b)=>`${a.name}和${b.name}`,
-        text:(a,b)=>`保安说，晚自习散了以后，有两个学生在操场看台上坐到快十一点。今天早上，${b.name}的同桌把一张折成方块的纸条放在了你桌上——她说她不是想告状，她是怕出事。`,
+        text:(a,b)=>hasFlag("phoneRaid")
+          ? `保安说，晚自习散了以后，有两个学生在操场看台上坐到快十一点。今天早上，你在作业本里翻到一张折成方块的纸条——${b.name}的同桌没敢当面给你。搜过手机之后，他们跟你说话都留着一半。`
+          : `保安说，晚自习散了以后，有两个学生在操场看台上坐到快十一点。今天早上，${b.name}的同桌把一张折成方块的纸条放在了你桌上——她说她不是想告状，她是怕出事。`,
         signs:null,
         choices:[
           {label:"分开座位，各自谈一次",hint:(a,b)=>`最常规的处理。两个人都答应得很快，快得让你觉得没说真话。`,
@@ -1360,12 +1500,14 @@ const CHAINS={
     },
     stages:[
       { eyebrow:"晚自习", title:a=>`第三排靠窗的空位`,
-        text:a=>`点名的时候${a.name}不在。保安说看见有学生从后墙翻出去了。十点四十，你在学校后门那条街的网吧二楼找到了${TA(a)}——耳机还挂在脖子上，屏幕没关。\n\n${TA(a)}看见你，第一反应是把显示器关掉。`,
+        text:a=>`点名的时候${a.name}不在。保安说看见有学生从后墙翻出去了。十点四十，你在学校后门那条街的网吧二楼找到了${TA(a)}——耳机还挂在脖子上，屏幕没关。${hasFlag("caughtThem")?"网吧老板认出了你，主动把二楼的灯打开了。":""}\n\n${TA(a)}看见你，第一反应是把显示器关掉。`,
         choices:[
           {label:"当场带回学校，通知家长",hint:a=>`按规矩办。家里人半小时就到了，在校门口没说一句话，只是一直看着${TA(a)}。`,
            eff:{discipline:10,morale:-3},run:a=>{applyEff({mood:-13,stress:13,trust:-9,study:3},a);},flag:"gameParent"},
-          {label:t=>`在网吧门口的台阶上坐下，问${t}在打什么`,hint:a=>`${TA(a)}愣了很久，然后真的讲了。讲了二十分钟，讲到${TA(a)}在那个游戏里是队长。`,
-           eff:{teaching:-2,discipline:-4},run:a=>{applyEff({trust:14,mood:10,stress:-9},a);},flag:"gameListen"},
+          {label:t=>`在网吧门口的台阶上坐下，问${t}在打什么`,hint:a=>hasFlag("caughtThem")
+             ?`${TA(a)}以为你是来抓人的——上次那三个就是你抓回去的。${TA(a)}愣了很久，然后真的讲了，讲到${TA(a)}在那个游戏里是队长。`
+             :`${TA(a)}愣了很久，然后真的讲了。讲了二十分钟，讲到${TA(a)}在那个游戏里是队长。`,
+           eff:{teaching:-2,discipline:-4},run:a=>{applyEff({trust:hasFlag("caughtThem")?17:14,mood:10,stress:-9},a);},flag:"gameListen"},
           {label:"记下来，回学校再处理",hint:a=>`你没在网吧里发作。第二天的检讨写得很标准，一个字的真话都没有。`,
            eff:{discipline:5},run:a=>{applyEff({mood:-4,stress:4},a);},flag:"gameLater"}
         ]},
@@ -1419,7 +1561,7 @@ function showChain(ch,next){
       addLog(`${st.title(a,b)}：${TX(ch2.label,TA(a))}`);
       const cur=CHAINS[c.active];
       c.stage++;
-      if(c.stage>=cur.stages.length){ c.done.push(c.active); c.active=null; c.stage=0; c.nextWeek=0; state.chainsFinished=(state.chainsFinished||0)+1; }
+      if(c.stage>=cur.stages.length){ cast.forEach(x=>x&&mark(x,"chain_"+cur.id)); c.done.push(c.active); c.active=null; c.stage=0; c.nextWeek=0; state.chainsFinished=(state.chainsFinished||0)+1; }
       else {
         const g=cur.stages[c.stage].gap||2;
         const at=cur.stages[c.stage].notBefore||0;
@@ -1463,7 +1605,7 @@ function doHomeVisit(){
          eff:{trust:9,mood:6,stress:-8}}
       ].map(c=>({label:c.label,hint:c.hint.replace(/\$\{T\}/g,TA(s)),onChoose:()=>{
         const d=applyEff(c.eff,s);
-        s.visited=true; state.visits=(state.visits||0)+1;
+        s.visited=true; state.visits=(state.visits||0)+1; mark(s,"visited");
         state.stats.teaching=clamp(state.stats.teaching-2);
         setScene("office",`你从${s.name}家出来的时候天已经黑了。`,s);
         spend("visit",`家访：${s.name}家。`);
@@ -1599,7 +1741,7 @@ function doJournal(){
       body:`<div class="journal"><div class="journal-mood">${j.mood}</div><p>${j.text}</p><div class="journal-sign">——${s.name}，${dateOf(state.week)}</div></div>
       <p style="opacity:.75;font-size:.88em">你只来得及认真回一本。</p>`,
       choices:[...j.reply.map(r=>({label:r.label,hint:r.hint.replace(/\$\{T\}/g,TA(s)),onChoose:()=>{
-        const d=applyEff(r.eff,s); state.journalDone=true; state.journalTotal=(state.journalTotal||0)+1;
+        const d=applyEff(r.eff,s); mark(s,"journal"); state.journalDone=true; state.journalTotal=(state.journalTotal||0)+1;
         addLog(`你在${s.name}的周记本上写了回复。`);
         closeModal(false);
         showOutcome({title:"你回了这一本",text:r.hint.replace(/\$\{T\}/g,TA(s)),portrait:portraitHTML(s),delta:d},()=>render());
@@ -1645,7 +1787,7 @@ function showStudentAsk(next){
   openModal({eyebrow:"有人敲门",title:`${s.name} 站在办公室门口`,
     body:`<div class="event-scene">${portraitHTML(s)}<div class="dialogue">${a.t(s)}</div></div><p>${a.d(s)}</p>`,
     choices:a.choices.map(c=>({label:c.label,hint:c.hint.replace(/\$\{T\}/g,T),onChoose:()=>{
-      const d=applyEff(c.eff,s); addLog(`${s.name}来办公室找过你。`);
+      const d=applyEff(c.eff,s); mark(s,"knocked"); addLog(`${s.name}来办公室找过你。`);
       closeModal(false);
       showOutcome({title:c.label,text:c.hint.replace(/\$\{T\}/g,T),portrait:portraitHTML(s),delta:d},next);
     }}))});
@@ -1667,9 +1809,17 @@ function seatChemistry(a,b){
   if(bothHigh) return 2;            // 处得来，互相拉
   return 0;
 }
+// 信任到了 65 的孩子，会开始替你做事——同桌的错题，他们顺手就讲了
+function isAnchor(s){ return s&&!s.out&&s.trust>=65&&s.mood>=50; }
 function applySeats(){
   (state.seats||[]).forEach(([x,y])=>{
     const a=studentById(x), b=studentById(y);
+    // 信任解锁：一个稳住了的孩子，能带住旁边那个
+    if(isAnchor(a)&&b&&!b.out){ b.stress=clamp(b.stress-0.7); b.study=clamp(b.study+0.25,0,b.ceiling||100); }
+    if(isAnchor(b)&&a&&!a.out){ a.stress=clamp(a.stress-0.7); a.study=clamp(a.study+0.25,0,a.ceiling||100); }
+    // 情绪会传染：坐在一个快撑不住的人旁边，自己也会往下沉
+    const drag=(p,q)=>{ if(p&&q&&!p.out&&!q.out&&(p.stress>=86||p.strain>=1)){ q.stress=clamp(q.stress+0.9); q.mood=clamp(q.mood-0.9); } };
+    drag(a,b); drag(b,a);
     const c=seatChemistry(a,b);
     if(!c) return;
     [a,b].forEach(p=>{ if(!p||p.out) return;
@@ -1723,7 +1873,7 @@ const LOOKS=[
      };
      const books=[
        {s:need[0],t:tell(need[0])},{s:need[1],t:tell(need[1])},{s:need[2],t:tell(need[2])},
-       {s:happy,t:`最后一页的角落画了一只很小的猫，旁边写着：老师应该看不到这里。`},
+       {s:happy,t:`最后一页的角落画了一只很小的猫，旁边写着：老师应该看不到这里。`,tag:"cat"},
        {s:r1,t:`每道大题后面都给自己写了批注，最新一条是：这次真的懂了（第四次）。`},
        {s:r2,t:`本子后面夹着一张手绘的「错题率走势图」，画得像股票，还标了「抄底点」。`}
      ];
@@ -1733,6 +1883,7 @@ const LOOKS=[
        bind:()=>{
          $$('[data-hw]').forEach(btn=>btn.addEventListener("click",()=>{
            const b=books[+btn.dataset.hw];
+           if(b.tag) mark(b.s,b.tag);
            btn.classList.add("open"); btn.disabled=true;
            btn.innerHTML=`<span>${b.s.name}</span><p>${b.t}</p>`;
            playTone(480,.04);
@@ -1876,10 +2027,14 @@ function renderStories(){
   }
   $("#storyList").innerHTML=met.map(s=>{
     const state_=s.out?(s.injured?"gone":"left"):s.node===null?"closed":"open";
-    const tail={gone:"已经不在学校了",left:`${dateOf(s.outWeek)}走的`,closed:"这件事过去了",
-      open:`${TA(s)}还有话没说`}[state_];
-    return `<div class="desknote ${state_}"><div class="note-pin"></div>`+
-      `<strong>${s.name}</strong><span class="note-thread">${s.thread}</span>`+
+    // 三章一条线：走到哪一章，一眼看得见；停了多久，也看得见
+    const clock=`<span class="story-clock ${state_}">${[0,1,2].map(i=>`<i class="${i<s.story?"full":""}"></i>`).join("")}</span>`;
+    const stalled=state_==="open"&&s.beatWeek&&state.week-s.beatWeek>=3;
+    const tail={gone:"已经不在学校了",left:`${dateOf(s.outWeek)}走的`,
+      closed:s.selfClosed?`这件事${TA(s)}自己扛过去了。你没赶上`:"这件事过去了",
+      open:stalled?`${TA(s)}还有话没说。${dateOf(s.beatWeek)}之后，你们没再谈过`:`${TA(s)}还有话没说`}[state_];
+    return `<div class="desknote ${state_} ${stalled?"stalled":""}"><div class="note-pin"></div>`+
+      `<strong>${s.name}</strong>${clock}<span class="note-thread">${s.thread}</span>`+
       `<small>${tail}</small></div>`;
   }).join("");
 }
@@ -2019,6 +2174,7 @@ function chooseTutor(){chooseStudent("这节课，坐到谁身边？","单人提
   pickSub({eyebrow:`辅导 · ${s.name}`,title:"补哪一科",hint:"时间只够啃一科。",options:opts},o=>{
     const f=dim("tutor"), own=o.k===state.subject, aimed=o.k===weak;
     applyEff({study:Math.round((own?10:aimed?9:6)*f),trust:3,stress:own?4:6,mood:-2},s);
+    mark(s,"tutored");
     state.stats.teaching=clamp(state.stats.teaching+(own?2:0));
     if(s.lastSub) s.lastSub[o.k]=Math.min(Math.round(SUBJECT_FULL[o.k]*SUBJECT_CAP[o.k]),s.lastSub[o.k]+(aimed?4:2));
     setScene("classroom",own
@@ -2044,6 +2200,7 @@ function chooseParent(){chooseStudent("给谁的家里打电话？","降压最�
     options:PARENT_TONE},o=>{
     const f=dim("parent"), relief=Math.round((s.stress>=70?14:8)*f*o.reliefMul);
     applyEff({...o.eff,stress:-relief},s);
+    mark(s,"called");
     if(rand()<o.risk){ state.stats.prestige=clamp(state.stats.prestige-4); addLog(`${s.name}的家长把你的话转述给了别人，版本变了。`); }
     else state.stats.prestige=clamp(state.stats.prestige+o.prestige);
     if(o.probe&&rand()<.45){ s.mood=clamp(s.mood+6); s.stress=clamp(s.stress-6); addLog(`你问出了${s.name}家里最近的一件事。`); }
@@ -2076,7 +2233,7 @@ function startStoryBeat(s){
     openModal({eyebrow:"课后谈心",title:`${s.name} · ${s.tag}`,
       body:`<div class="event-scene">${avatarHTML(s).replace("student-avatar","event-portrait")}<div class="dialogue">${t[0]}</div></div><p>${t[1](TA(s))}</p>`,
       choices:[{label:"听他说完",hint:hint2,onChoose:()=>{
-        applyEff({trust:5,stress:-9,mood:6},s);closeModal();
+        applyEff({trust:5,stress:-9,mood:6},s);mark(s,"talked");closeModal();
         setScene("office",`你和${s.name}聊了十分钟。窗外的操场慢慢空了。`,s);
         spend("talk",`与${s.name}谈心：压力下降，信任上升。`);
       }}]});
@@ -2096,7 +2253,7 @@ function startStoryBeat(s){
   openModal({eyebrow:`${s.thread} · 第 ${s.story+1} 章`,title:beat.title,
     body:`<div class="event-scene"><div class="event-portrait ${s.portrait}"></div><div><div class="dialogue">${beat.quote}</div></div></div><p>${beat.text}</p>`,
     choices:beat.choices.map(c=>({label:c.label,hint:c.hint,onChoose:()=>{
-      const d=applyEff(c.eff,s); setFlag(c.flag); s.story++; s.node=c.next||null;
+      const d=applyEff(c.eff,s); setFlag(c.flag); s.story++; s.node=c.next||null; s.beatWeek=state.week;
       closeModal(false); setScene("office",c.hint,s);
       spend("talk",`${s.name}《${s.thread}》第 ${s.story} 章：${c.label}。`);
       showOutcome({title:c.label,text:c.hint,portrait:portraitHTML(s),delta:d,flag:c.flag,
@@ -2107,12 +2264,17 @@ function startStoryBeat(s){
 function showStudent(s){
   const nextTitle=s.node?s.nodes[s.node].title:"故事已完成";
   const info=s.key&&s.met
-    ? `<p><b>优势：</b>${s.strength}</p><p><b>风险：</b>${s.risk}</p><p><b>故事线：</b>《${s.thread}》${s.story}/3</p>`
+    ? `<p><b>优势：</b>${s.strength}</p><p><b>风险：</b>${s.risk}</p><p><b>故事线：</b>《${s.thread}》 <span class="story-clock">${[0,1,2].map(i=>`<i class="${i<s.story?"full":""}"></i>`).join("")}</span>${
+        s.node&&s.beatWeek&&state.week-s.beatWeek>=3?`<br><small style="color:#a4483a">上次谈到这件事，还是${agoPhrase(s.beatWeek,state.week)}。</small>`:""}</p>`
     : `<p><b>身份：</b>${s.tag}</p><p><b>任课老师评估：</b>再拼一学期，大概能到 ${s.ceiling||100} 分档${(s.ceiling||100)<70?"。底子薄，急不来":(s.ceiling||100)>90?"。是块料":""}</p>`+
       `<p style="opacity:.75">${s.stress>=80?`最近状态不太好。有空的话，找${TA(s)}说说话。`:"目前没什么特别的事。"}</p>`;
   openModal({eyebrow:`学生档案 · ${s.tag}`,title:s.name,
     body:`<div class="event-scene">${(s.portrait?`<div class="event-portrait ${s.portrait}"></div>`:avatarHTML(s).replace("student-avatar","event-portrait"))}<div>${info}</div></div>
     ${s.out?"":`<p style="opacity:.8;font-size:.92em"><b>班上的说法：</b>${quirkOf(s)}。</p>`}
+    ${s.out?"":marksLine(s)}
+    ${s.out?"":(s.trust>=75?`<p style="opacity:.85;font-size:.92em;color:#3f8581"><b>你们之间：</b>${TA(s)}已经开始替你稳住别人了——同桌的题${TA(s)}顺手就讲，班里的事${TA(s)}会先一步告诉你。</p>`
+      :s.trust>=65?`<p style="opacity:.85;font-size:.92em;color:#3f8581"><b>你们之间：</b>${TA(s)}会把同桌的错题也一起讲掉。你没安排过，${TA(s)}自己做的。</p>`
+      :s.trust>=55?`<p style="opacity:.85;font-size:.92em;color:#3f8581"><b>你们之间：</b>遇到不会的题，${TA(s)}现在敢直接来敲办公室的门了。</p>`:"")}
     <div class="result-grid"><div class="result-cell"><strong>${Math.round(s.study)}</strong><small>学业</small></div><div class="result-cell"><strong>${Math.round(s.mood)}</strong><small>心情</small></div><div class="result-cell"><strong>${Math.round(s.stress)}</strong><small>压力</small></div></div>
     ${s.strain?`<p style="color:#c0392b"><b>警告：</b>${TA(s)}已经处在崩溃边缘。再有一周不下降，就会永久退出。</p>`:""}
     <p><b>当前估分：</b>${projectedPersonal(s)} 分 · 预计可上 <b>${bandOf(projectedPersonal(s)).tier}</b>（${bandOf(projectedPersonal(s)).cut}）</p>
@@ -2145,6 +2307,25 @@ function weeklyDrift(){
     if(s.stress>=86){ s.study=clamp(s.study-(s.stress>=93?2:1),0,s.ceiling||100); s.mood=clamp(s.mood-2); }
     if(state.incident) s.stress=clamp(s.stress+1);   // 出事之后，整个班都没缓过来
   });
+  // 信任解锁：真正信你的孩子多了（信任≥75），班级会开始自己稳住自己——最多算三个
+  const anchors=active().filter(s=>s.trust>=75&&s.mood>=50).length;
+  if(anchors) state.stats.morale=clamp(state.stats.morale+Math.min(3,anchors)*0.4);
+  // 快撑不住的人多了，整间教室都能感觉到
+  if(active().filter(s=>s.stress>=86).length>=3) state.stats.morale=clamp(state.stats.morale-1.2);
+  // 越线的代价是慢性的：线越过得多，学生把话咽回去的也越多
+  if((state.hardLine||0)>=3) state.stats.trust=clamp(state.stats.trust-0.5);
+  if((state.hardLine||0)>=6) active().forEach(s=>s.trust=clamp(s.trust-0.4));
+
+  // 停在半路的故事不会一直等你——五周没接着谈，那件事就自己走完了（往坏的方向）
+  keyStudents().forEach(s=>{
+    if(s.out||!s.met||!s.node||!s.beatWeek||s.selfClosed) return;
+    if(state.week-s.beatWeek>=5){
+      s.selfClosed=true; s.node=null;
+      s.stress=clamp(s.stress+5); s.trust=clamp(s.trust-6); s.mood=clamp(s.mood-4);
+      addLog(`《${s.thread}》——${s.name}没再提过那件事。好像自己翻篇了，又好像没有。`);
+    }
+  });
+
   // 没有哪个状态是冲到顶就不用再管的：高位自己会往回掉
   ["teaching","morale","discipline","trust"].forEach(k=>{
     if(state.stats[k]>=88) state.stats[k]=clamp(state.stats[k]-2);
@@ -2281,7 +2462,7 @@ function crisisStageModal(s,next){
 function crisisEasedModal(s,next){
   state.stats.trust=clamp(state.stats.trust+4);
   addLog(`${s.name}的状态明显好转了。`);
-  unlockMedal("m_saved");
+  unlockMedal("m_saved"); mark(s,"saved");
   openModal({eyebrow:"缓过来了",title:`${s.name} 今天笑了一下`,
     body:`<div class="event-scene">${portraitHTML(s)}<div class="dialogue">“老师，我这周睡得挺好的。真的。”</div></div>
     <p>他把没写完的作业补交了。这件事不会写进任何一份材料里，但你知道它发生过。</p>`,
@@ -2357,9 +2538,13 @@ function drawEvent(){
 }
 function showEvent(ev,next){
   state.usedEvents.push(ev.id);
+  // 咬合：你过去的做法会改写今天这件事的样子——同一个事件，不同的班主任遇到的不是同一件事
+  const v=(ev.variants||[]).find(x=>hasFlag(x.if));
+  const text=(v&&v.text)||ev.text;
+  const choices=(v&&v.choices)||ev.choices;
   openModal({eyebrow:"这一周",title:ev.title,
-    body:`<div class="event-scene"><div class="event-portrait ${ev.portrait}"></div><div class="dialogue">${ev.text}</div></div>`,
-    choices:ev.choices.map(c=>({label:c.label,hint:c.hint,onChoose:()=>{
+    body:`<div class="event-scene"><div class="event-portrait ${ev.portrait}"></div><div class="dialogue">${text}</div></div>${v&&v.note?`<p class="echo-note">${v.note}</p>`:""}`,
+    choices:choices.map(c=>({label:c.label,hint:c.hint,onChoose:()=>{
       const d=applyEff(c.eff);setFlag(c.flag);addLog(`${ev.title}：${c.label}。`);closeModal(false);
       showOutcome({title:c.label,text:c.hint,portrait:`<div class="event-portrait ${ev.portrait}"></div>`,delta:d,flag:c.flag},next);
     }}))});
@@ -2395,6 +2580,8 @@ function endWeek(){
       else { const ev=drawEvent(); if(ev) steps.push(n=>showEvent(ev,n)); }
     }
   }
+  const mir=dueMirror();
+  if(mir) steps.push(n=>mirrorModal(mir,n));
   if(state.week<12) steps.push(n=>weeklyReport(n));
   runSteps(steps,()=>{ if(!state.finished) advanceWeek(); });
 }
@@ -2476,6 +2663,11 @@ function weeklyReport(next){
   if(risky.length>1) lines.push(`<li>压力过 80 的一共 ${risky.length} 个人。</li>`);
   pending.forEach((x,i)=>lines.push(`<li><b>${x.name}</b>${PAUSED[(state.week+i)%PAUSED.length]}。</li>`));
   if(state.crisis&&state.crisis.id){ const c=studentById(state.crisis.id); if(c&&!c.out) lines.push(`<li style="color:#c0392b"><b>${c.name}</b>这周还是那个样子。</li>`); }
+  // 情绪传染，手记里看得出来
+  const dragPair=(state.seats||[]).map(([x,y])=>[studentById(x),studentById(y)])
+    .find(([p,q])=>p&&q&&!p.out&&!q.out&&((p.stress>=86&&q.stress<80)||(q.stress>=86&&p.stress<80)));
+  if(dragPair&&rand()<.45){ const [p,q]=dragPair[0].stress>=86?dragPair:[dragPair[1],dragPair[0]];
+    lines.push(`<li>坐在<b>${p.name}</b>旁边的<b>${q.name}</b>，这周话也少了。</li>`); }
   // 闲笔：手记里也会记一些跟分数无关的事——但出过事的班里没有闲笔
   if(lightAllowed()&&rand()<.5){
     const pool=active().filter(okForLight), a=pool.length?pool:active(), sl=a[rint(0,a.length-1)];
@@ -2493,6 +2685,10 @@ function weeklyReport(next){
   }
   const goodPair=(state.seats||[]).map(([x,y])=>[studentById(x),studentById(y)]).find(([a2,b2])=>a2&&b2&&seatChemistry(a2,b2)===2);
   if(goodPair&&lightAllowed()&&rand()<.35) lines.push(`<li style="opacity:.85"><b>${goodPair[0].name}</b>和<b>${goodPair[1].name}</b>把两张桌子拼得越来越近，美其名曰「学习共同体」。</li>`);
+  // 信任解锁的事，手记里认得出来
+  const anchorPair=(state.seats||[]).map(([x,y])=>[studentById(x),studentById(y)]).find(([a2,b2])=>a2&&b2&&(isAnchor(a2)&&!isAnchor(b2)||isAnchor(b2)&&!isAnchor(a2)));
+  if(anchorPair&&rand()<.4){ const [p,q]=isAnchor(anchorPair[0])?anchorPair:[anchorPair[1],anchorPair[0]];
+    lines.push(`<li style="opacity:.85"><b>${p.name}</b>把同桌的错题也一起讲了。你没安排过。</li>`); }
   if(!lines.length) lines.push("<li>这一周班上没出什么事。</li>");
 
   const proj=projectedScore(), rk=1+state.rivals.filter(r=>r.score>proj).length;
@@ -2511,8 +2707,8 @@ function runExam(next){
   const surprises=[], personals={};
   active().forEach(s=>{
     let p=rawScore(s)+rint(-10,10);
-    if(s.stress>=82&&rand()<.45){ p-=rint(25,48); surprises.push(`${s.name}发挥失常，比平时低了一大截。`); }
-    else if(s.trust>=70&&s.mood>=62&&rand()<.3){ p+=rint(12,28); surprises.push(`${s.name}考出了从没有过的分数。`); }
+    if(s.stress>=82&&rand()<.45){ p-=rint(25,48); surprises.push(`${s.name}发挥失常，比平时低了一大截。`); if(state.week===12) mark(s,"stumbled"); }
+    else if(s.trust>=70&&s.mood>=62&&rand()<.3){ p+=rint(12,28); surprises.push(`${s.name}考出了从没有过的分数。`); if(state.week===12) mark(s,"soared"); }
     personals[s.id]=Math.max(280,Math.min(742,Math.round(p)));
   });
   const alive=active();
@@ -2572,6 +2768,45 @@ const AWAKEN_INTRO = {
 function dueAwaken(){
   return keyStudents().find(s=>!s.met&&!s.out&&(state.week>=s.awakenWeek||s.stress>=84));
 }
+
+// ── 主动来的学生：信任攒够了，会有人自己带着题找上门 ─────────────────
+function dueSeeker(){
+  if(state.week<2||state.finished) return null;
+  if((state.lastSeekWeek||0)>=state.week-1) return null;      // 隔周才会再有人来
+  if(state.incident||(state.crisis&&state.crisis.stage>=2)) return null;
+  if(rand()>=.35) return null;
+  const cands=active().filter(s=>s.trust>=55&&s.stress<80&&s.study<(s.ceiling||100)-4
+    &&!(state.crisis&&state.crisis.id===s.id));
+  if(!cands.length) return null;
+  return [...cands].sort((a,b)=>b.trust-a.trust)[rint(0,Math.min(4,cands.length-1))];
+}
+function showSeeker(s){
+  state.lastSeekWeek=state.week;
+  const w=s.lastSub?weakSubject(s.lastSub):null;
+  const subj=w||SUBJECT_NAME[state.subject];
+  openModal({eyebrow:"有人主动来了",title:`${s.name}拿着卷子等在门口`,
+    body:`<div class="event-scene">${portraitHTML(s)}<div class="dialogue">“老师，这道${subj}题我想了两天，还是不对。您什么时候有空？我等得了。”</div></div>
+    <p>没人叫${TA(s)}来。自己走到办公室门口的学生，一学期遇不上几个。</p>`,
+    choices:[
+      {label:"“现在就有空。坐。”",hint:"占用这周 1 点行动力。但自己走进来的学生，一点就透，还不伤状态。",onChoose:()=>{
+        const d=applyEff({study:11,stress:-4,trust:5,mood:4},s); mark(s,"tutored");
+        closeModal(false);
+        setScene("office",`你把椅子搬到桌边。这道题讲了十五分钟，${TA(s)}又追着问了两道。`,s);
+        spend("tutor",`${s.name}主动来问题，你讲了大半个午休。`);
+        showOutcome({title:"现在就有空",text:`讲到第三道题的时候，${TA(s)}说：老师，原来我不是笨，是这里一直没人给我说破。`,portrait:portraitHTML(s),delta:d},()=>render());
+      }},
+      {label:"“先记下来，晚自习我过去找你。”",hint:"走廊小课，十分钟。不占行动力，聊胜于无。",onChoose:()=>{
+        const d=applyEff({study:3,trust:2},s);
+        closeModal(false); addLog(`${s.name}主动来问题，你在晚自习抽空讲了讲。`);
+        showOutcome({title:"晚自习的十分钟",text:`题讲完了，但${TA(s)}后面那句“还有一道”你没接住——你还有四十七个人的晚自习。`,portrait:portraitHTML(s),delta:d},()=>render());
+      }},
+      {label:"“这周实在排不开。”",hint:"下次，这扇门可能就不会再被敲响了。",onChoose:()=>{
+        const d=applyEff({trust:-5,mood:-4},s);
+        closeModal(false); addLog(`${s.name}主动来问题，你没顾上。`);
+        showOutcome({title:"这周实在排不开",text:`${TA(s)}说没关系，把卷子收了回去。收得很慢。`,portrait:portraitHTML(s),delta:d},()=>render());
+      }}
+    ]});
+}
 function openAwaken(s){
   s.met=true;
   const beat=s.nodes[s.node];
@@ -2582,7 +2817,7 @@ function openAwaken(s){
     <p>${beat.text}</p>
 `,
     choices:beat.choices.map(c=>({label:c.label,hint:c.hint,onChoose:()=>{
-      const d=applyEff(c.eff,s); setFlag(c.flag); s.story++; s.node=c.next||null;
+      const d=applyEff(c.eff,s); setFlag(c.flag); s.story++; s.node=c.next||null; s.beatWeek=state.week;
       addLog(`${s.name}《${s.thread}》第 1 章：${c.label}。`);
       closeModal(false); setScene("office",c.hint,s); render();
       showOutcome({title:c.label,text:c.hint,portrait:portraitHTML(s),delta:d,flag:c.flag,
@@ -2601,6 +2836,7 @@ function advanceWeek(){
   render();window.scrollTo({top:0,behavior:"smooth"});
   const k=dueAwaken();          // 每周最多一个人找上门
   if(k) setTimeout(()=>openAwaken(k),420);
+  else { const sk=dueSeeker(); if(sk) setTimeout(()=>showSeeker(sk),420); }   // 剧情不来的周，才轮到主动的学生
 }
 
 // ── 结局 ────────────────────────────────────────────────────────────
@@ -2745,6 +2981,7 @@ function admissionFromWish(s){
 function epilogueFor(s){
   if(s.injured) return `${dateOf(s.outWeek)}出事。在康复中心，能坐起来了，握笔还不太稳。`;
   if(s.out) return `${dateOf(s.outWeek)}离开。${s.thread?`《${s.thread}》停在第 ${s.story} 章。`:"没能等到高考。"}`;
+  if(s.selfClosed) return `《${s.thread}》停在第 ${s.story} 章。后来${TA(s)}没再提过，你也一直没问。`;
   const F=hasFlag;
   const map={
     linxiaoyu: F("linFree")?"填了那所学校的天文系。志愿表上母亲的签名，是她自己去谈下来的。"
@@ -2773,7 +3010,7 @@ function epilogueFor(s){
 }
 function finishGame(score,rank,examBody){
   state.finished=true;state.energy=0;save();
-  const completed=keyStudents().filter(s=>!s.out&&s.met&&s.node===null).length;
+  const completed=keyStudents().filter(s=>!s.out&&s.met&&s.node===null&&!s.selfClosed).length;   // 自己翻篇的不算你走完的
   const lost=state.lost.length;
   const avgMood=Math.round(avgStudent("mood"));
   // 你在这四十八个人身上花过多少时间——这比名次更能决定这一届是什么样子
@@ -2812,6 +3049,15 @@ function finishGame(score,rank,examBody){
   else if(hasFlag("delayedHealth")&&hasFlag("pushedThrough")){ ending="你也在这一届里"; verdict="学生都送出去了。第二天你才想起抽屉里那张体检单。"; }
   else { ending="把每个人送到门口"; verdict="不算漂亮的一届。但没有人在半路掉队。"; }
 
+  if((state.hardLine||0)>=6) verdict+=`\n\n这一学期你越过的线，你自己都记得。成绩单不记这些，但四十八个人记得。`;
+  state.wasCold=cold; save();   // 十年后那一章要用
+
+  // 口碑传给下一届
+  let rep=0;
+  if(rank<=3) rep++; if(completed>=3) rep++; if(avgMood>=60) rep++;
+  if(lost>=1) rep--; if((state.hardLine||0)>=6) rep--; if(state.incident) rep-=3;
+  saveLegacy({rep:Math.max(-3,Math.min(3,rep)),gen:state.gen||1,ending,incident:!!state.incident});
+
   // 纪念册：这一届留下的页码
   recordEnding(ending);
   if(completed>=5) unlockMedal("m_all5");
@@ -2822,6 +3068,8 @@ function finishGame(score,rank,examBody){
   if((state.visits||0)>=4) unlockMedal("m_visit");
   if((state.lookTotal||0)>=30) unlockMedal("m_looker");
 
+  // 班委的托付也算一笔
+  Object.values(state.posts||{}).forEach(id=>{ const s=studentById(id); if(s&&!s.out) mark(s,"post"); });
   keyStudents().forEach(s=>s.admission=admissionFor(s));
   const admitted=keyStudents().filter(s=>s.admission.cls==="high"||s.admission.cls==="special").length;
   const rows=keyStudents().map(s=>{
@@ -2850,13 +3098,71 @@ function finishGame(score,rank,examBody){
     <h3 style="margin:18px 0 6px;font-size:15px">你陪着走完的那几个</h3>
     <table class="score-table admit-table"><thead><tr><th>学生</th><th>高考</th><th>录取</th><th>后来</th></tr></thead><tbody>${rows}</tbody></table>
     <p style="opacity:.8">其中 211 及以上 ${admitted} 人。</p>
+    ${(()=>{ const bgs=state.students.filter(x=>!x.key);
+      const epi=bgs.map(x=>`<div class="epi-row"><b>${x.name}</b><span>${x.out?"—":`${x.lastScore||"—"}${x.lastScore?` · ${bandOf(x.lastScore).cut}`:""}`}</span><p>${bgEpilogue(x)}</p></div>`).join("");
+      return `<h3 style="margin:18px 0 6px;font-size:15px">其余 ${bgs.length} 个人</h3>
+      <button class="roster-btn" id="bgEpiBtn">翻开毕业纪念册（${bgs.length} 人）</button>
+      <div id="bgEpi" class="full-sheet" style="display:none">${epi}</div>`; })()}
     <p>这一学期，你找学生谈过 ${talked} 次话，往家里打过 ${called} 个电话，开过 ${met} 次班会，去过 ${state.visits||0} 次家访。走完的事 ${completed}/5，中途离开 ${lost} 人，全班平均心情 ${avgMood}。</p>
     ${verdict.split("\n\n").map(x=>`<p><b>${x}</b></p>`).join("")}`,
     choices:[
       {label:"回看这一学期",hint:"保留毕业成绩与手记",onChoose:()=>{closeModal();render()}},
+      {label:"看看十年后",hint:"2036 年 6 月的那一天",onChoose:()=>{closeModal(false);tenYears();}},
       {label:"再带一届学生",hint:"清空本局，从选科开始",onChoose:()=>{dropSave();location.reload()}}
     ]});
   bindSheet();
+  const eb=$("#bgEpiBtn");
+  if(eb) eb.addEventListener("click",()=>{
+    const el=$("#bgEpi"); const open=el.style.display!=="none";
+    el.style.display=open?"none":"block";
+    eb.textContent=open?`翻开毕业纪念册（${state.students.filter(x=>!x.key).length} 人）`:"合上纪念册";
+  });
+}
+
+// ── 十年后：当年的每个决定，都有一个 2036 年的回声 ────────────────────
+function tenYears(){
+  const F=hasFlag, ps=[];
+  if(state.incident){
+    const s=studentById(state.incident.id);
+    ps.push(`同学会你没去。那个周末你照旧去了康复中心。${s.name}现在能自己操作轮椅了，${TA(s)}说：老师，别每次都拎水果，换点别的。你们都笑了。笑完，谁都没接话。`);
+    ps.push(`散会后群里发了合照，四十几张笑脸。你数了两遍，然后把手机扣在了桌上。`);
+  } else if(state.wasCold){
+    ps.push(`毕业十年，班群一直很安静。今天有人发了张聚餐合照——你数了数，到了二十一个。你把照片放大，能立刻叫出名字的，不到一半。`);
+    ps.push(`你回了一个举杯的表情。没有人接。过了一会儿，群又安静了下去。`);
+  } else {
+    ps.push(`2036 年 6 月，饭店最大的包间。来了三十多个，有人带了孩子，进门就往你这边推：叫老师。`);
+    const key={
+      linxiaoyu: s=>s.out?`林小雨没来。她的名字被提起的时候，包间里静了一秒。`
+        :F("linFree")?`林小雨在天文台工作。她带来一张自己参与拍摄的星图，背面写着一串坐标——她说，那是高考那天晚上的天区。`
+        :F("linAbandoned")?`林小雨没来，听说在国外。她往聚会账户转了一笔钱，备注只有两个字：谢谢。`
+        :`林小雨坐在你旁边，话不多。走的时候，她把你的茶续满了。`,
+      zhouyang: s=>s.out?`周扬没来。有人说他在外地，挺好的。`
+        :F("zhouPath")?`周扬现在带初中体育。他说：老师，我现在天天留学生加练，终于明白你当年为啥总留我。`
+        :F("zhouWait")?`周扬复读那年考上了。现在开了家体能馆，名片上印着一行小字：文化课也补。`
+        :`周扬来得最早，搬桌子倒水摆凳子，像还在当体育委员。`,
+      suqing: s=>s.out?`苏晴转学之后就断了联系。有人说她在南方，还在写。`
+        :F("suKept")?`苏晴出了本散文集。扉页只有一行：给读过《旁听》的人。全场只有你知道说的是谁。`
+        :F("suNamed")?`苏晴做了记者。她说当年那场满城风雨，现在回头看，是她第一篇署名报道。`
+        :`苏晴现在也教语文。她说她批周记，一晚上只认真回一本——跟你学的。`,
+      chengmo: s=>s.out?`程默没来。他家里人说他在做研究，一切都好。`
+        :F("chengBet")?`程默博士毕业了。微信签名还是一串式子，他说导师也看不懂。`
+        :`程默话还是少。但这一次，他主动坐到了你旁边。`,
+      luming: s=>s.out?`陆鸣的位置又空着。每年的合照，都有人提一句。`
+        :F("luStayed")?`陆鸣的耳机现在两边都戴——开视频会议用。他说当年留一只耳朵，是想听听有没有人叫他。`
+        :`陆鸣来了。进门先看了一圈，找的是当年的座位。`
+    };
+    keyStudents().forEach(s=>{ if(s.met&&key[s.id]) ps.push(key[s.id](s)); });
+    const savedBg=state.students.find(s=>!s.key&&(s.marks||[]).includes("saved"));
+    if(savedBg) ps.push(`${savedBg.name}后来也站上了讲台。${TA(savedBg)}说，班里也有一个「当年的自己」——这一次，没有被错过。`);
+    ps.push(`散场时有人喊：老师，明年还聚。你说好。走出饭店，晚风和十年前毕业那晚差不多。`);
+  }
+  openModal({eyebrow:"十年后 · 2036 年 6 月",
+    title:state.incident?"你没去同学会":state.wasCold?"班群里的合照":"同学会",
+    body:ps.map(x=>`<p>${x}</p>`).join(""),
+    choices:[
+      {label:"回到毕业那天",hint:"手记还摊在桌上",onChoose:()=>{closeModal();render()}},
+      {label:"再带一届学生",hint:"清空本局，从选科开始",onChoose:()=>{dropSave();location.reload()}}
+    ]});
 }
 
 // ── 弹窗与说明 ──────────────────────────────────────────────────────
