@@ -2558,6 +2558,7 @@ function endWeek(){
   applySeats();
   postEffects();
   const steps=[n=>crisisCheck(n)];
+  if(state.week===12) steps.push(n=>gaokaoEve(n));            // 六月六号的晚上，先过完
   if([3,6,9,12].includes(state.week)) steps.push(n=>runExam(n));
   else {
     // 你自己种下的事，到点一定会来敲门
@@ -2702,6 +2703,331 @@ function weeklyReport(next){
     choices:[{label:state.week>=11?"翻到高考那一周":`翻到 ${dateOf(state.week+1)}`,onChoose:()=>{closeModal(false);next&&next()}}]});
 }
 
+// ── 高考三日：过场 ──────────────────────────────────────────────────
+// 以前是：点完最后一周，成绩单直接糊到脸上。八十三天没有一个落点。
+// 现在这三天要一分钟走完——六月六号晚上你最后说的那句话（它真的会改分数）、
+// 两天四场的钟和铃、六月二十三号夜里那个数字一位一位跳出来。
+let cutTimers=[], cutRaf=0, cutSkipFn=null;
+function cutT(fn,ms){ const id=setTimeout(fn,ms); cutTimers.push(id); return id; }
+function cutClear(){ cutTimers.forEach(clearTimeout); cutTimers=[]; if(cutRaf) cancelAnimationFrame(cutRaf); cutRaf=0; }
+const lowMotion=()=>!!(window.matchMedia&&window.matchMedia("(prefers-reduced-motion:reduce)").matches);
+function cutEl(){
+  let el=$("#cutscene"); if(el) return el;
+  el=document.createElement("div");
+  el.id="cutscene"; el.className="cut hidden";
+  el.innerHTML='<div class="cut-grain"></div>'+
+    '<button class="cut-skip hidden" id="cutSkip">跳过 ›</button>'+
+    '<div class="cut-stage"><div class="cut-date" id="cutDate"></div>'+
+    '<h2 class="cut-title" id="cutTitle"></h2><div class="cut-sub" id="cutSub"></div>'+
+    '<div class="cut-extra" id="cutExtra"></div><div class="cut-lines" id="cutLines"></div>'+
+    '<div class="cut-choices" id="cutChoices"></div></div>';
+  document.body.appendChild(el);
+  el.querySelector("#cutSkip").addEventListener("click",()=>{
+    const f=cutSkipFn; cutSkipFn=null; cutClear();
+    $("#cutSkip").classList.add("hidden"); f&&f();
+  });
+  return el;
+}
+function cutOpen(tone,{date="",title="",sub="",extra=""}){
+  const el=cutEl();
+  el.className="cut cut-"+(tone||"night");
+  $("#cutDate").textContent=date; $("#cutTitle").textContent=title;
+  $("#cutSub").innerHTML=sub; $("#cutExtra").innerHTML=extra;
+  $("#cutLines").innerHTML=""; $("#cutChoices").innerHTML="";
+  $("#cutSkip").classList.add("hidden");
+  document.body.style.overflow="hidden";
+  return el;
+}
+function cutClose(){ cutClear(); cutSkipFn=null; cutEl().className="cut hidden"; document.body.style.overflow=""; }
+function cutSkip(fn){ cutSkipFn=fn; cutEl(); $("#cutSkip").classList.toggle("hidden",!fn); }
+function cutSay(arr,done,gap){
+  const box=$("#cutLines"); let i=0; const g=lowMotion()?420:(gap||1700);
+  const step=()=>{
+    if(i>=arr.length){ done&&done(); return; }
+    const p=document.createElement("p"); p.className="cut-line"; p.innerHTML=arr[i++];
+    box.appendChild(p); requestAnimationFrame(()=>p.classList.add("in"));
+    cutT(step,g);
+  };
+  step();
+}
+function cutSayAll(arr){ $("#cutLines").innerHTML=arr.map(x=>`<p class="cut-line in">${x}</p>`).join(""); }
+function cutBtn(label,hint,fn){
+  $("#cutChoices").innerHTML=`<button class="cut-go">${label}${hint?`<small>${hint}</small>`:""}</button>`;
+  const b=$("#cutChoices .cut-go");
+  requestAnimationFrame(()=>b.classList.add("in"));
+  b.addEventListener("click",()=>{playTone(630);fn()});
+}
+function cutChoices(list){
+  $("#cutChoices").innerHTML=list.map((c,i)=>
+    `<button class="cut-choice" data-cut="${i}"><strong>${c.label}</strong>${c.hint?`<small>${c.hint}</small>`:""}</button>`).join("");
+  list.forEach((c,i)=>{ const b=$(`[data-cut="${i}"]`);
+    cutT(()=>b.classList.add("in"),110*i);
+    b.addEventListener("click",()=>{playTone(630);c.onChoose()}); });
+}
+// 上下课铃：两声，第二声高一点
+function bellTone(){ playTone(880,.3); cutT(()=>playTone(1174,.5),190); }
+function cutDesks(){
+  return `<div class="cut-desks">${state.students.map(s=>
+    `<span class="cut-desk${s.out?" gone":""}"></span>`).join("")}</div>`;
+}
+
+// ── 六月六日：最后一晚 ──────────────────────────────────────────────
+// 这里的选择是真的：它改的是全班上考场时的压力值，而压力≥82 的人有 45% 概率崩盘。
+function gaokaoEve(next){
+  const gone=(state.lost||[]).length, tired=active().filter(s=>s.stress>=80).length;
+  cutOpen("night",{date:"二〇二六年六月六日 · 星期六",title:"最后一晚",sub:"晚自习提前一小时结束",
+    extra:'<div class="cut-board"><small>距 高 考</small><b>0</b><span>天</span></div>'});
+  const L=[
+    "值日生举着黑板擦问你，倒计时牌上那个「1」还改不改。你说改吧，最后改一次。",
+    gone?`准考证按学号发下去，一张一张过手。有 ${gone} 张压在讲台的教案底下，没有人来拿。`
+        :`准考证按学号发下去，一张一张过手。${classSize()} 张，一张不多，一张不少。`,
+    tired>=8?"你抬头扫了一圈，有八九个人的眼睛是肿的。没人说话，笔袋被反复摸来摸去。"
+            :"教室比平时安静。有人把文具袋拉开又合上，合上又拉开。",
+    "八点四十，铃响了。没有人站起来。他们在等你说点什么。"
+  ];
+  const ask=()=>{
+    cutSkip(null);
+    cutChoices([
+      {label:"把四十八个名字念一遍",hint:"占掉最后十分钟。念到空位上的名字时，你会听见自己的停顿。",onChoose:()=>eve("names")},
+      {label:"最后讲十分钟高频考点",hint:"你准备了三页纸。有人开始记，也有人已经记不进去了。",onChoose:()=>eve("drill")},
+      {label:"什么也不说，把灯一盏一盏关掉",hint:"你站在门口，等最后一个人走出来。",onChoose:()=>eve("lights")}
+    ]);
+  };
+  cutSkip(()=>{cutSayAll(L);ask()});
+  cutSay(L,ask);
+
+  function eve(id){
+    let tail="", note="";
+    if(id==="names"){
+      active().forEach(s=>{s.stress=clamp(s.stress-7);s.mood=clamp(s.mood+6);s.trust=clamp(s.trust+3)});
+      state.stats.morale=clamp(state.stats.morale+5); state.stats.trust=clamp(state.stats.trust+4);
+      setFlag("calledEveryName");
+      tail=gone?"你念到那几个不在的名字时，教室里没有人接话，也没有人纠正你。念完，最后一个人小声说了句「到」。"
+               :"四十八个「到」，一个没落。念到最后一个的时候，你自己的声音有点不稳。";
+      note="全班压力 −7 · 心情 +6 · 士气 +5";
+      addLog("最后一晚，你把四十八个名字念了一遍。");
+    }else if(id==="drill"){
+      active().forEach(s=>{s.study=clamp(s.study+2,0,s.ceiling||100);s.stress=clamp(s.stress+4)});
+      state.stats.teaching=clamp(state.stats.teaching+2); state.stats.morale=clamp(state.stats.morale-2);
+      tail="三页纸讲完，下面记住多少你不知道。有个学生把笔记本合上，说老师，我脑子已经装不下了。";
+      note="全班学业 +2 · 压力 +4 · 士气 −2";
+      addLog("最后一晚，你又讲了十分钟高频考点。");
+    }else{
+      active().forEach(s=>{s.stress=clamp(s.stress-4);s.mood=clamp(s.mood+3)});
+      state.stats.morale=clamp(state.stats.morale+3);
+      tail="灯一排一排暗下去。最后一个走出来的学生在门口回头看了一眼教室，什么也没说，跟你摆了摆手。";
+      note="全班压力 −4 · 心情 +3 · 士气 +3";
+      addLog("最后一晚，你把灯一盏一盏关掉，站在门口等最后一个人。");
+    }
+    $("#cutChoices").innerHTML="";
+    cutSay([tail,`<span class="cut-note">${note}</span>`],()=>{
+      cutBtn("回家。明天六点半，校门口","八十三天，走到这里了",()=>next());
+    },1500);
+  }
+}
+
+// ── 六月七日 — 八日：两天四场 ───────────────────────────────────────
+const EXAM_SESSIONS=[
+  {d:"六月七日",dow:"星期日",name:"语文",from:"09:00",to:"11:30"},
+  {d:"六月七日",dow:"星期日",name:"数学",from:"15:00",to:"17:00"},
+  {d:"六月八日",dow:"星期一",name:"文科综合／理科综合",from:"09:00",to:"11:30"},
+  {d:"六月八日",dow:"星期一",name:"外语",from:"15:00",to:"17:00"}
+];
+// 考场里看不见的那些事——按这一届的实际状态挑，不是随机贴图
+function examBeats(i){
+  const alive=active(), one=a=>a.length?a[rint(0,a.length-1)]:null;
+  const K=id=>{const s=studentById(id);return s&&!s.out?s:null};
+  const hi=alive.filter(s=>s.stress>=82), held=alive.filter(s=>s.trust>=70&&s.mood>=62);
+  const shaky=one(hi), steady=one(held), any=one(alive);
+  const su=K("suqing"), cm=K("chengmo"), zy=K("zhouyang"), lm=K("luming"), lin=K("linxiaoyu");
+  const out=[];
+  if(i===0){
+    out.push("九点整，第一遍铃。整栋楼一下子安静下来，安静到能听见发卷子的声音。");
+    out.push(su?(hasFlag("suNamed")||hasFlag("suSubmitted")
+        ?`今年的作文题是《把灯留给后来的人》。苏晴盯着题目看了很久，然后写得很快。`
+        :`今年的作文题是《把灯留给后来的人》。苏晴在草稿纸上列了三次提纲，划掉了两次。`)
+      :"今年的作文题是《把灯留给后来的人》。");
+    out.push(shaky?`${shaky.name}的手在抖。第一行字写了三遍，前两遍都涂掉了。`
+      :steady?`${steady.name}答得很稳。这是你见过${TA(steady)}状态最好的一次。`
+      :"卷面翻页的声音一阵一阵的，像风。");
+  }else if(i===1){
+    out.push("下午三点，数学。今年的压轴题，考完以后会上本市的新闻。");
+    out.push(cm?"程默在第十七分钟就翻到了最后一页。他没急着动笔，先把整张卷子从头看完了。"
+      :`最后一道大题下面，很多张卷子都是空的。`);
+    out.push(lin&&hasFlag("linFree")?"林小雨在最后一题旁边画了一颗很小的星星。监考老师走过去看了一眼，没说话。"
+      :shaky?`${shaky.name}提前二十分钟就停笔了。不是做完了。`
+      :"离交卷还有十分钟的时候，有人开始把答题卡上的框一个一个描深。");
+  }else if(i===2){
+    out.push("第二天上午。两个半小时，三门课，三百分。这是最耗体力的一场。");
+    out.push(zy?"周扬中途趴了三十秒。监考老师看了他一眼，没管。他自己又坐起来了。"
+      :"有人写到一半开始甩手腕。空调的风从后面吹过来，卷子角一直在抖。");
+    out.push(shaky?`${shaky.name}的答题卡涂到一半，橡皮断了。${TA(shaky)}举了手。`
+      :"最后十五分钟，好几个考场同时响起了涂卡的沙沙声。");
+  }else{
+    out.push("最后一场。听力开始前有五分钟静场，广播里只有电流声。");
+    out.push(lm?"陆鸣的听力部分几乎没有停笔。这是他这两年唯一没输过的东西。"
+      :"听力放到第三段的时候，窗外有辆车按了两声喇叭。全楼都听见了。");
+    out.push(any?`十七点整，最后一遍铃。${any.name}把笔放下的时候，手在桌上按了两秒才拿开。`
+      :"十七点整，最后一遍铃。");
+  }
+  return out;
+}
+function runSession(i,skipAll,done){
+  const s=EXAM_SESSIONS[i];
+  cutOpen("exam",{date:`二〇二六年${s.d} · ${s.dow}`,title:s.name,
+    sub:`${s.from} — ${s.to} <em>第 ${i+1} 场 / 共 4 场</em>`,
+    extra:`<div class="cut-clockrow"><div class="cut-clock" id="cutClock">${s.from}</div>`+
+      `<div class="cut-bar"><i id="cutBarFill"></i></div></div>`+cutDesks()+
+      `<div class="cut-deskhint">${classSize()} 张课桌${(state.lost||[]).length?` · 空 ${state.lost.length} 张`:" · 一张不空"}</div>`});
+  cutSkip(skipAll);
+  bellTone();
+  const dur=lowMotion()?900:5400;
+  const beats=examBeats(i);
+  const fill=$("#cutBarFill"), clock=$("#cutClock");
+  const [h1,m1]=s.from.split(":").map(Number), [h2,m2]=s.to.split(":").map(Number);
+  const span=(h2*60+m2)-(h1*60+m1), t0=performance.now();
+  beats.forEach((b,j)=>cutT(()=>{
+    const p=document.createElement("p"); p.className="cut-line"; p.innerHTML=b;
+    $("#cutLines").appendChild(p); requestAnimationFrame(()=>p.classList.add("in"));
+  },dur*[.08,.40,.74][j]));
+  // 课桌上零星亮起来的，是还在写字的人
+  const desks=$$("#cutscene .cut-desk:not(.gone)");
+  const twinkle=()=>{
+    if(!desks.length) return;
+    const d=desks[rint(0,desks.length-1)];
+    d.classList.add("writing"); cutT(()=>d.classList.remove("writing"),620);
+    cutT(twinkle,lowMotion()?900:230);
+  };
+  if(!lowMotion()) twinkle();
+  const tick=t=>{
+    const k=Math.min(1,(t-t0)/dur);
+    fill.style.width=(k*100).toFixed(1)+"%";
+    const m=h1*60+m1+Math.round(span*k);
+    clock.textContent=`${String(Math.floor(m/60)).padStart(2,"0")}:${String(m%60).padStart(2,"0")}`;
+    if(k<1){ cutRaf=requestAnimationFrame(tick); return; }
+    bellTone(); cutSkip(null);
+    const p=document.createElement("p"); p.className="cut-line in cut-bell"; p.textContent="交卷。";
+    $("#cutLines").appendChild(p);
+    cutT(done,lowMotion()?400:1200);
+  };
+  cutRaf=requestAnimationFrame(tick);
+}
+// ── 六月七日 六点半：送考 ───────────────────────────────────────────
+// 从关灯直接跳到九点开考，中间差着半天。这半天是点名、塞水、和车门口那句话。
+function sendOff(next){
+  const gone=(state.lost||[]).length, kids=active();
+  const one=a=>a.length?a[rint(0,a.length-1)]:null;
+  const asker=one(kids.filter(s=>s.trust>=60))||one(kids);
+  cutOpen("dawn",{date:"二〇二六年六月七日 · 早上六点半",title:"送考",sub:"明德中学 · 校门口",
+    extra:`<div class="cut-roll">${state.students.map(s=>
+      `<span class="cut-name${s.out?" gone":""}">${s.name}</span>`).join("")}</div>`+
+      `<div class="cut-deskhint" id="cutRollHint">点名 · ${kids.length} / ${classSize()}</div>`});
+  // 名字一个一个亮起来，就是点名本身
+  const chips=$$("#cutscene .cut-name");
+  chips.forEach((c,i)=>cutT(()=>c.classList.add("in"),lowMotion()?0:38*i));
+  const L=[
+    "天刚亮透。横幅昨晚就挂上去了，风一吹，「旗开得胜」的那个「胜」字卷了起来，没人去拉。",
+    "家长比学生到得早。有人往你手里塞了瓶水，说老师您也喝点。你说不用，然后接了过来。",
+    "你按学号点名。清点两遍：人，准考证，身份证。第三遍是你自己心里点的。",
+    gone?(gone===1?"点到那个不在的名字时，没有人应。你也没停，接着往下点。"
+                  :`点到那 ${gone} 个不在的名字时，没有人应。你也没停，接着往下点。`)
+        :`${classSize()} 个「到」，一个不落。你把名册合上，手心全是汗。`,
+    asker?`六点五十，车来了。${asker.name}上车前突然回头问你：老师，要是考砸了怎么办。`
+         :"六点五十，车来了。有个学生上车前突然回头看了你一眼，什么也没问。"
+  ];
+  const ask=()=>{
+    cutSkip(null);
+    cutChoices([
+      {label:"“考砸了就考砸了。车上还有二十分钟，睡一会。”",
+       hint:"你没给他任何保证。这可能是他这三个月听到的第一句不逼他的话。",onChoose:()=>go("calm")},
+      {label:"“考不砸。你昨天那道题不是做对了吗。”",
+       hint:"你把最后一点底气借给他。你自己剩下多少，只有你知道。",onChoose:()=>go("push")},
+      {label:"“不知道。但我在校门口等你出来。”",
+       hint:"你没回答那个问题。你回答了另一个。",onChoose:()=>go("wait")}
+    ]);
+  };
+  cutSkip(()=>{cutSayAll(L);ask()});
+  cutSay(L,ask);
+
+  function go(id){
+    const t=asker?TA(asker):"他";
+    const tail={
+      calm:`${t}愣了一下，笑了，说老师你怎么跟我妈说的不一样。然后上了车，靠着窗真的睡着了。`,
+      push:`${t}用力点了两下头，转身上车。车开出去很远，你才想起来那道题${t}其实是问了你三遍才会的。`,
+      wait:`${t}什么也没说，上了车。车窗关上之前，你看见${t}回头看了你一眼。`
+    }[id];
+    setFlag({calm:"sendOffCalm",push:"sendOffPush",wait:"sendOffWait"}[id]);
+    addLog({calm:"送考那天早上，你让他上车睡一会。",
+            push:"送考那天早上，你把最后一点底气借给了他。",
+            wait:"送考那天早上，你说你在校门口等他出来。"}[id]);
+    $("#cutChoices").innerHTML="";
+    cutSay([tail,"你站在原地，看着最后一辆车拐出巷口。接下来的两天，你什么也做不了了。"],()=>{
+      cutBtn("九点整，第一场","语文 · 09:00 — 11:30",()=>next());
+    },1600);
+  }
+}
+
+function gaokaoDays(done){
+  const out=()=>examOut(done);
+  const step=i=>{ if(i>=EXAM_SESSIONS.length){ out(); return; } runSession(i,out,()=>step(i+1)); };
+  sendOff(()=>step(0));          // 六点半校门口，先把人送上车
+}
+function examOut(next){
+  cutOpen("dusk",{date:"六月八日 · 十七点整",title:"考完了",sub:"两天，四场，八十三天"});
+  const gone=(state.lost||[]).length;
+  const L=[
+    "最后一遍铃响过，整栋楼像被人一下子推开了。",
+    "校门口全是人。有家长举着相机，有孩子一出门就哭了，也有人站在原地，不知道该往哪边走。",
+    gone?`你在人群里一个一个数过去。数到最后，还是少 ${gone} 个。`
+        :"你在人群里一个一个数过去。四十八个，一个不少。",
+    "有人回头朝你挥手，喊了声老师。然后人就散了。",
+    hasFlag("sendOffWait")?"你在校门口站到人走光。前天早上说的那句话，你自己记着。"
+      :hasFlag("sendOffPush")?"那道问了三遍的题今年考了。出来的时候他隔着人群冲你比了个手势。"
+      :hasFlag("sendOffCalm")?"你在人群里找到了那个在车上睡着的孩子。这两天他看起来居然是睡够了的。"
+      :"你在门口站了一会儿，没等到谁特意来找你。",
+    "剩下的事不归你管了。但你还是会等那个数字。"
+  ];
+  const end=()=>{cutSkip(null);cutBtn("等分数","六月二十三日 · 夜里十点",()=>next())};
+  cutSkip(()=>{cutSayAll(L);end()});
+  cutSay(L,end);
+}
+
+// ── 六月二十三日：出分 ──────────────────────────────────────────────
+function rollTo(el,to,ms,done){
+  const t0=performance.now();
+  const step=t=>{ const k=Math.min(1,(t-t0)/ms), e=1-Math.pow(1-k,3);
+    el.textContent=Math.round(to*e);
+    if(k<1){cutRaf=requestAnimationFrame(step)} else {el.textContent=to;done&&done()} };
+  cutRaf=requestAnimationFrame(step);
+}
+function scoreRelease(ours,rank,body,next){
+  const total=state.rivals.length+1;
+  cutOpen("night",{date:"二〇二六年六月二十三日 · 夜里十点",title:"查分",sub:"省教育考试院 · 成绩查询",
+    extra:'<div class="cut-score"><div class="cut-scorenum" id="cutNum">—</div>'+
+      '<small>高三（7）班 · 高考平均分</small>'+
+      `<div class="cut-stamp hidden" id="cutRank">年级第 ${rank} <em>/ ${total}</em></div></div>`});
+  const L=[
+    "查分网站从九点半就开始卡。你刷新了很多次，页面一直在转。",
+    "十点零四分，第一个学生的电话打进来。然后是第二个、第三个。你一边接，一边在表上填。",
+    "最后一栏是平均分。你按下回车键的时候，手指停了一下。"
+  ];
+  const reveal=()=>{
+    cutSkip(null); playTone(520,.2);
+    rollTo($("#cutNum"),ours,lowMotion()?200:1800,()=>{
+      cutT(()=>{const r=$("#cutRank");r.classList.remove("hidden");requestAnimationFrame(()=>r.classList.add("in"));playTone(720,.45)},420);
+      cutT(()=>cutBtn("打开完整成绩单","八个班的名次 · 各科得分率 · 全班上线情况",
+        ()=>{cutClose();showExamSheet(body,next)}),1150);
+    });
+  };
+  cutSkip(()=>{cutSayAll(L);reveal()});
+  cutSay(L,reveal);
+}
+function showExamSheet(body,next){
+  openModal({eyebrow:"六月二十三日 · 成绩发布",title:"高考成绩单",body,
+    choices:[{label:"去填志愿",hint:"接下来的每一张志愿表，都要你陪着填",onChoose:()=>{closeModal(false);next()}}]});
+  bindSheet();
+}
+
 function runExam(next){
   const examNames={3:"第一次月考",6:"期中考试",9:"全市一模",12:"高考"},name=examNames[state.week];
   const surprises=[], personals={};
@@ -2752,7 +3078,11 @@ function runExam(next){
       :rank<=5?"不上不下。有人开始相信七班能往上走，也有人已经不抱指望了。"
       :"成绩单很沉，名次贴在楼道里。你把批评的话划掉，先圈出真正能改的题。"}</p>`;
 
-  if(state.week===12){ runWishes(()=>finishGame(ours,rank,body)); return; }
+  // 分数已经算好了，但玩家还不能看：先把两天四场考完，再等六月二十三号的夜里。
+  if(state.week===12){
+    gaokaoDays(()=>scoreRelease(ours,rank,body,()=>runWishes(()=>finishGame(ours,rank,body))));
+    return;
+  }
   openModal({eyebrow:`${dateOf(state.week)} · 阶段考试`,title:name,body,
     choices:[{label:"收好成绩单，继续向前",hint:`距高考还有 ${daysLeft(state.week)} 天`,onChoose:()=>{closeModal(false);next()}}]});
   bindSheet();
