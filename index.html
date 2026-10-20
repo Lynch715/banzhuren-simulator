@@ -10,7 +10,7 @@
   <meta name="description" content="《铃响之后》——一款关于教学、陪伴与高考的班主任模拟器。">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath fill='%23153f44' d='M32 2 58 12l-5 38-21 12L11 50 6 12z'/%3E%3Cpath fill='%23f5cf69' d='M18 20h28v5H35v20h-6V25H18z'/%3E%3C/svg%3E">
   <title>铃响之后 · 班主任模拟器</title>
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="styles.css?v=20261019-dialog-scroll">
 </head>
 <body>
   <div id="app">
@@ -139,13 +139,15 @@
         <button id="modalClose" class="modal-close" aria-label="关闭">×</button>
         <div id="modalEyebrow" class="section-kicker">校园事件</div>
         <h2 id="modalTitle">标题</h2>
-        <div id="modalBody" class="modal-body"></div>
-        <div id="modalChoices" class="modal-choices"></div>
+        <div id="modalScroll" class="modal-scroll">
+          <div id="modalBody" class="modal-body"></div>
+          <div id="modalChoices" class="modal-choices"></div>
+        </div>
       </section>
     </div>
 
     <div id="toast" class="toast" role="status" aria-live="polite"></div>
   </div>
-  <script src="game.js"></script>
+  <script src="game.js?v=20261019-dialog-scroll"></script>
 </body>
 </html>

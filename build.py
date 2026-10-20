@@ -51,11 +51,13 @@ def main():
     if "</script" in js:
         sys.exit("game.js 含有 </script，会提前闭合标签")
 
-    html = html.replace(
-        '<link rel="stylesheet" href="styles.css">', "<style>\n%s\n</style>" % css
+    html = re.sub(
+        r'<link rel="stylesheet" href="styles\.css(?:\?[^\"]*)?">',
+        lambda _: "<style>\n%s\n</style>" % css, html
     )
-    html = html.replace(
-        '<script src="game.js"></script>', "<script>\n%s\n</script>" % js
+    html = re.sub(
+        r'<script src="game\.js(?:\?[^\"]*)?"></script>',
+        lambda _: "<script>\n%s\n</script>" % js, html
     )
 
     leftover = re.findall(r'(?:src|href)="(?!data:)[^"#][^"]*"', html)

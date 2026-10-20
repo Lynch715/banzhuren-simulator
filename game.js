@@ -3506,6 +3506,7 @@ function openModal({eyebrow="校园事件",title,body,choices=[],dismissible=fal
   $("#modal").dataset.dismissible=canClose?"1":"0";
   $("#modalClose").classList.toggle("hidden",!canClose);
   $("#modalBackdrop").classList.remove("hidden");document.body.style.overflow="hidden";
+  $("#modalScroll").scrollTop=0;                     // 正文和长选项列表一起回到顶部
   $("#modalBody").scrollTop=0;                       // 长弹窗要从头开始读
   $("#modal").scrollTop=0;
 }

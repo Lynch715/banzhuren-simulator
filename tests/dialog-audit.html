@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="zh-CN"><meta charset="utf-8"><title>弹窗滚动回归验收</title>
+<style>body{font:14px system-ui;margin:20px;background:#eef3ed;color:#183b3c}button{padding:12px}iframe{display:block;border:1px solid #888;margin:16px 0}pre{white-space:pre-wrap}.fail{color:#a32222}</style>
+<h1>弹窗滚动回归验收</h1>
+<p>测试使用内存存档，分别载入分文件版与单文件版。检查真实弹窗的边界、正文高度、每个按钮和列表末项的可达性。</p>
+<button id="run">运行验收</button><strong id="summary">尚未运行</strong>
+<pre id="results"></pre><div id="stage"></div>
+<script>
+const sizes=[[320,568],[360,640],[390,844],[620,420],[800,360],[1024,408],[844,300],[1440,900]];
+const isolatedStorage=`const localStorage=(()=>{const m=new Map();return {getItem:k=>m.get(k)||null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k)}})();`;
+const hooks=`
+window.__qa={
+  reset(){state=initialState('math');state.sound=false;pendingModalCallback=null;closeModal(false);document.querySelector('#startScreen').classList.add('hidden');document.querySelector('#gameScreen').classList.remove('hidden');render()},
+  choices(){return [...document.querySelectorAll('#modalChoices button')]},
+  rosterPick(){chooseTutor();this.choices().at(-1).click()},
+  postPick(){showPosts();document.querySelector('[data-post]').click()},
+  wishes(){keyStudents().forEach(s=>{s.lastScore=530;s.lastSub={chinese:105,math:110,english:105,science:210}});runWishes(()=>{})},
+  scores(){active().forEach(s=>{s.lastScore=530;s.lastSub={chinese:105,math:110,english:105,science:210}});showExamSheet(scoreSheetHTML(active()),()=>{})},
+  tutor:chooseTutor,talk:chooseTalk,parent:chooseParent,visit:doHomeVisit,posts:showPosts,roster:showRoster,seats:showSeats,help:showHelp,medals:showMedals,lesson:doLesson,meeting:doMeeting,prep:doStudy,journal:doJournal,
+  homework(){state.looked=[];doLook(LOOKS[0]);document.querySelectorAll('[data-hw]').forEach(b=>b.click())},
+  profile(){showStudent(active().at(-1))},
+  portraitChoices(){this.visit();this.choices()[0].click()},
+  longText(){openModal({title:'长正文与长选项',body:'<p>回归：长正文需要完整显示。</p>'.repeat(40),choices:Array.from({length:12},(_,i)=>({label:'选项 '+(i+1),hint:'较长的提示文字需要自然换行，且最后一项可以触达。'}))})},
+  get state(){return state}
+};`;
+const tick=win=>new Promise(resolve=>win.requestAnimationFrame(()=>win.requestAnimationFrame(resolve)));
+function assert(ok,msg){if(!ok)throw new Error(msg)}
+// 只操作真正允许用户滚动的祖先，不能靠 overflow:hidden 的程序化滚动掩盖裁切。
+function reveal(el,win){
+  for(let p=el.parentElement;p;p=p.parentElement){
+    const style=win.getComputedStyle(p);
+    if(/auto|scroll/.test(style.overflowY))p.scrollTop+=el.getBoundingClientRect().top-p.getBoundingClientRect().top-(p.clientHeight-el.getBoundingClientRect().height)/2;
+    if(/auto|scroll/.test(style.overflowX))p.scrollLeft+=el.getBoundingClientRect().left-p.getBoundingClientRect().left-(p.clientWidth-el.getBoundingClientRect().width)/2;
+  }
+}
+function reachable(el,win){
+  reveal(el,win);
+  const r=el.getBoundingClientRect(),x=(r.left+r.right)/2,y=(r.top+r.bottom)/2;
+  const hit=win.document.elementFromPoint(x,y);
+  return x>=0&&x<win.innerWidth&&y>=0&&y<win.innerHeight&&!!hit&&(el===hit||el.contains(hit));
+}
+async function load(entry){
+  const frame=document.createElement('iframe');frame.width=1024;frame.height=408;
+  let html=await (await fetch('../'+entry,{cache:'no-store'})).text();
+  if(entry==='index.html'){
+    const js=await (await fetch('../game.js',{cache:'no-store'})).text();
+    html=html.replace(/<script src="game\.js(?:\?[^"]*)?"><\/script>/,()=>'<script>'+isolatedStorage+js.replace(/\nboot\(\);\s*$/,'\nboot();\n'+hooks)+'<'+'/script>');
+  }else{
+    html=html.replace('<script>','<script>'+isolatedStorage).replace('\nboot();','\nboot();\n'+hooks);
+  }
+  html=html.replace('<head>','<head><base href="'+new URL('../',location.href).href+'">');
+  const loaded=new Promise(resolve=>frame.onload=resolve);frame.srcdoc=html;document.querySelector('#stage').replaceChildren(frame);await loaded;
+  assert(frame.contentWindow.__qa,'测试入口未就绪');return frame;
+}
+document.querySelector('#run').onclick=async()=>{
+  const button=document.querySelector('#run'),out=document.querySelector('#results'),summary=document.querySelector('#summary');
+  button.disabled=true;out.textContent='';let passed=0,failed=0;const details=[];
+  const cases=['tutor','talk','parent','visit','rosterPick','posts','postPick','roster','seats','help','medals','lesson','meeting','prep','journal','homework','profile','portraitChoices','wishes','scores','longText'];
+  try{
+    for(const entry of ['index.html','铃响之后.html']){
+      const frame=await load(entry),win=frame.contentWindow,doc=win.document,q=win.__qa;
+      for(const [width,height]of sizes){
+        frame.width=width;frame.height=height;await tick(win);
+        for(const name of cases){
+          const label=entry+' '+width+'×'+height+' '+name;
+          try{
+            q.reset();q[name]();await tick(win);
+            const modal=doc.querySelector('#modal'),body=doc.querySelector('#modalBody'),r=modal.getBoundingClientRect();
+            assert(r.top>=17&&r.bottom<=height-17,'弹窗越出安全边距 '+r.top+'/'+r.bottom);
+            assert(body.clientHeight>0,'正文被压为 0 高');
+            const targets=[...doc.querySelectorAll('#modal .choice-btn,#modal [data-pick],#modal [data-seat],#modal [data-post],#modal tbody tr:last-child')];
+            assert(targets.length>0,'没有可验收目标');
+            for(const el of targets)assert(reachable(el,win),'无法触达：'+el.textContent.trim().slice(0,45));
+            // 重开弹窗必须回到顶部，不能沿用上一份名单的滚动位置。
+            q[name]();assert(doc.querySelector('#modalScroll').scrollTop===0,'重开没有重置滚动');
+            if(name==='rosterPick'){
+              const rows=[...doc.querySelectorAll('[data-pick]')],last=rows.at(-1),id=last.dataset.pick;
+              assert(rows.length===48,'花名册人数异常');assert(reachable(last,win),'第 48 人不可达');last.click();
+              assert(doc.querySelector('#modalEyebrow').textContent==='辅导 · '+q.state.students.find(s=>s.id===id).name,'最后一名学生选择回调未执行');
+            }
+            if(name==='postPick'){
+              const last=q.choices().at(-1),studentName=last.querySelector('strong').textContent.split(' · ')[0];
+              assert(q.choices().length===10,'任命候选人数异常');reveal(last,win);last.click();
+              assert(q.state.students.find(s=>s.id===q.state.posts.monitor).name===studentName,'最后一名候选人任命未执行');
+            }
+            if(name==='scores'&&width<=500){
+              const sheet=doc.querySelector('.sheet-scroll');assert(sheet.scrollWidth>sheet.clientWidth,'成绩单没有横向滚动');
+              sheet.scrollLeft=sheet.scrollWidth;assert(sheet.scrollLeft>0,'成绩单无法横向滚动');
+            }
+            passed++;
+          }catch(e){failed++;details.push(label+'：'+e.message)}
+          summary.textContent='通过 '+passed+' / 失败 '+failed;
+        }
+      }
+    }
+  }catch(e){failed++;details.push(e.stack)}
+  out.textContent=details.length?details.join('\n'):'所有弹窗、选项、花名册末项和成绩单滚动检查通过。';
+  summary.textContent='完成：通过 '+passed+' / 失败 '+failed;summary.dataset.passed=passed;summary.dataset.failed=failed;summary.className=failed?'fail':'';button.disabled=false;
+};
+</script></html>
